@@ -7,6 +7,7 @@ CSV: pandas, treated as single-sheet XLSX.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, date, time
 from pathlib import Path
 
 from app.parsers.base import Page, ParseResult
@@ -16,6 +17,23 @@ logger = logging.getLogger(__name__)
 
 ROWS_PER_PAGE = 100
 HEADER_REPEAT_INTERVAL = 50
+
+
+def _serialize_cell(value):
+    """Serialize a cell value to a JSON-safe type."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        return value.isoformat()
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, bool):
+        return value
+    return str(value)
 
 
 class XlsxParser:
@@ -94,6 +112,42 @@ class XlsxParser:
 
         return "\n".join(lines)
 
+    def parse_structured(
+        self, file_path: Path, sheet_filter: list[str] | None = None,
+    ) -> dict:
+        """Return structured JSON with columns and rows per sheet."""
+        import openpyxl
+
+        wb = openpyxl.load_workbook(str(file_path), read_only=True, data_only=True)
+        try:
+            sheets = []
+            for sheet_name in wb.sheetnames:
+                if sheet_filter and sheet_name not in sheet_filter:
+                    continue
+                ws = wb[sheet_name]
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows:
+                    sheets.append({
+                        "name": sheet_name,
+                        "columns": [],
+                        "rows": [],
+                        "total_rows": 0,
+                    })
+                    continue
+                columns = [str(c) if c is not None else "" for c in rows[0]]
+                data_rows = [
+                    [_serialize_cell(c) for c in row] for row in rows[1:]
+                ]
+                sheets.append({
+                    "name": sheet_name,
+                    "columns": columns,
+                    "rows": data_rows,
+                    "total_rows": len(data_rows),
+                })
+            return {"sheets": sheets}
+        finally:
+            wb.close()
+
     def _extract_metadata(self, wb) -> dict:
         """Extract XLSX workbook properties."""
         result = {}
@@ -160,6 +214,39 @@ class CsvParser:
             )
 
         return ParseResult(pages=pages)
+
+    def parse_structured(
+        self, file_path: Path, sheet_filter: list[str] | None = None,
+    ) -> dict:
+        """Return structured JSON with columns and rows."""
+        import pandas as pd
+
+        try:
+            df = pd.read_csv(str(file_path))
+        except Exception:
+            for enc in ("latin-1", "utf-16", "cp1252"):
+                try:
+                    df = pd.read_csv(str(file_path), encoding=enc)
+                    break
+                except Exception:
+                    continue
+            else:
+                return {"sheets": [{"name": "Data", "columns": [], "rows": [], "total_rows": 0}]}
+
+        columns = [str(c) for c in df.columns]
+        # Replace NaN with None for JSON serialization
+        rows = df.where(df.notna(), None).values.tolist()
+        # Serialize each cell
+        rows = [[_serialize_cell(c) for c in row] for row in rows]
+
+        return {
+            "sheets": [{
+                "name": "Data",
+                "columns": columns,
+                "rows": rows,
+                "total_rows": len(rows),
+            }]
+        }
 
     def _format_rows(
         self, headers: list[str], rows: list[tuple], chunk_start: int

@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
+from pathlib import Path
 from uuid import UUID
 
 from app.database import get_pool
 from app.utils.text import extract_lines, grep_with_context
+
+_SPREADSHEET_MIMES = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "text/csv",
+}
 
 
 class AmbiguousFilenameError(Exception):
@@ -225,3 +233,83 @@ async def read_file_text(
         text = grep_with_context(text, grep, context=2)
 
     return text, info
+
+
+# ---------------------------------------------------------------------------
+# Structured spreadsheet reading
+# ---------------------------------------------------------------------------
+
+async def get_file_info(file_id: UUID) -> dict:
+    """Get file_path, mime_type, and filename for a file."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT file_path, mime_type, filename FROM files WHERE id = $1",
+            file_id,
+        )
+        if not row:
+            raise FileNotFoundError(f"File {file_id} not found")
+        return dict(row)
+
+
+def _parse_structured(file_path_str: str, mime_type: str, sheet_filter: list[str] | None) -> dict:
+    """Synchronous helper — re-parse a spreadsheet into structured JSON."""
+    from app.parsers.spreadsheet import XlsxParser, CsvParser
+
+    file_path = Path(file_path_str)
+    if mime_type == "text/csv":
+        parser = CsvParser()
+    else:
+        parser = XlsxParser()
+    return parser.parse_structured(file_path, sheet_filter=sheet_filter)
+
+
+async def read_structured_spreadsheet(
+    file_id: UUID,
+    pages: str | None = None,
+) -> dict:
+    """Read a spreadsheet file and return structured JSON with columns/rows.
+
+    Raises ValueError if the file is not a spreadsheet.
+    """
+    info = await get_file_info(file_id)
+    mime_type = info["mime_type"]
+
+    if mime_type not in _SPREADSHEET_MIMES:
+        raise ValueError(
+            f"format=json is only supported for spreadsheet files, "
+            f"got {mime_type}"
+        )
+
+    # Determine sheet filter from pages param
+    sheet_filter: list[str] | None = None
+    if pages:
+        page_spec = parse_page_spec(pages)
+        if isinstance(page_spec, str):
+            # Named sheet
+            sheet_filter = [page_spec]
+        else:
+            # Numeric pages — resolve to sheet names via section_titles
+            page_nums = page_spec
+            pool = await get_pool()
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    "SELECT DISTINCT section_title FROM pages "
+                    "WHERE file_id = $1 AND page_number = ANY($2) "
+                    "AND section_title IS NOT NULL",
+                    file_id,
+                    page_nums,
+                )
+            if rows:
+                # Extract base sheet name (strip " - rows N-M" suffix)
+                names = set()
+                for r in rows:
+                    title = r["section_title"]
+                    # Strip row range suffix like " - rows 2-101"
+                    base = title.split(" - rows ")[0] if " - rows " in title else title
+                    names.add(base)
+                sheet_filter = list(names)
+
+    return await asyncio.to_thread(
+        _parse_structured, info["file_path"], mime_type, sheet_filter
+    )

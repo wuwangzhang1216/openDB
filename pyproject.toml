@@ -37,9 +37,17 @@ dependencies = [
     "python-magic-bin>=0.4.14; sys_platform == 'win32'",
     "python-magic>=0.4.27; sys_platform != 'win32'",
     "pydantic-settings>=2.0.0",
+    "watchdog>=4.0.0",
 ]
 
 [project.optional-dependencies]
+mcp = [
+    "mcp>=1.0.0",
+    "httpx>=0.28.0",
+]
+integration = [
+    "httpx>=0.28.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -58,7 +66,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "mcp_server*", "musedb_integration*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

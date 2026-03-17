@@ -9,8 +9,10 @@ from app.services.read_service import (
     AmbiguousFilenameError,
     FileNotFoundError,
     read_file_text,
+    read_structured_spreadsheet,
     resolve_filename,
 )
+from app.utils.text import format_with_line_numbers
 
 router = APIRouter(tags=["read"])
 
@@ -22,6 +24,8 @@ async def read_file(
     lines: str | None = Query(None, description="Line range: 50-80"),
     grep: str | None = Query(None, description="Search pattern, use + for multi-term"),
     toc: bool = Query(False, description="Return table of contents"),
+    format: str | None = Query(None, description="Output format: 'json' for structured data (spreadsheets only)"),
+    numbered: bool = Query(False, description="Add line numbers to output (cat -n style)"),
 ):
     """Read a file as plain text. Like cat but for any file format."""
     try:
@@ -37,9 +41,29 @@ async def read_file(
             content={"error": "ambiguous_filename", "candidates": e.candidates},
         )
 
+    # Structured JSON output for spreadsheets
+    if format == "json":
+        try:
+            data = await read_structured_spreadsheet(file_id, pages=pages)
+            return JSONResponse(content=data)
+        except ValueError as e:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "bad_request", "detail": str(e)},
+            )
+
     text, info = await read_file_text(
         file_id, pages=pages, lines=lines, grep=grep, toc=toc
     )
+
+    # Apply line numbering if requested
+    if numbered and not grep and not toc:
+        start_line = 1
+        if lines:
+            # Preserve original line numbers when a range is specified
+            parts = lines.strip().split("-")
+            start_line = int(parts[0])
+        text = format_with_line_numbers(text, start=start_line)
 
     return PlainTextResponse(
         content=text,

@@ -92,6 +92,39 @@ def _detect_current_page(lines: list[str], up_to_idx: int, default: str = "") ->
     return default
 
 
+def format_with_line_numbers(
+    text: str,
+    line_index: list[int] | None = None,
+    start: int = 1,
+    end: int | None = None,
+) -> str:
+    """Format text with right-aligned line numbers (cat -n style).
+
+    Args:
+        text: The text to format.
+        line_index: Optional pre-computed line index for efficient extraction.
+        start: First line number (1-indexed). Used for line range extraction.
+        end: Last line number (1-indexed, inclusive). None = to end of file.
+
+    Returns:
+        Text with each line prefixed by its line number + tab.
+    """
+    if line_index and (start > 1 or end is not None):
+        actual_end = end or len(line_index)
+        text = extract_lines(text, line_index, start, actual_end)
+    else:
+        start = 1
+
+    lines = text.split("\n")
+    last_num = start + len(lines) - 1
+    width = max(len(str(last_num)), 6)
+    result = []
+    for i, line in enumerate(lines):
+        num = start + i
+        result.append(f"{num:>{width}}\t{line}")
+    return "\n".join(result)
+
+
 def format_page_marker(page: Page, file_mime: str = "") -> str:
     """Generate the appropriate page marker string."""
     if "presentation" in file_mime:

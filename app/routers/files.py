@@ -105,7 +105,7 @@ async def list_files(
 
     query = f"""
         SELECT f.id, f.filename, f.mime_type, f.file_size,
-               f.tags, f.metadata, f.created_at,
+               f.tags, f.metadata, f.created_at, f.updated_at, f.status,
                ft.total_lines,
                (SELECT COUNT(*) FROM pages p WHERE p.file_id = f.id) AS total_pages
         FROM files f
@@ -135,7 +135,9 @@ async def list_files(
                 "total_lines": row["total_lines"],
                 "tags": row["tags"],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else {},
+                "status": row["status"],
                 "created_at": row["created_at"].isoformat(),
+                "updated_at": row["updated_at"].isoformat(),
             }
         )
 
@@ -151,7 +153,7 @@ async def get_file(file_id: UUID):
         row = await conn.fetchrow(
             """
             SELECT f.id, f.filename, f.mime_type, f.file_size,
-                   f.tags, f.metadata, f.created_at,
+                   f.tags, f.metadata, f.created_at, f.updated_at, f.status,
                    ft.total_lines,
                    (SELECT COUNT(*) FROM pages p WHERE p.file_id = f.id) AS total_pages
             FROM files f
@@ -172,7 +174,9 @@ async def get_file(file_id: UUID):
         "total_lines": row["total_lines"],
         "tags": row["tags"],
         "metadata": json.loads(row["metadata"]) if row["metadata"] else {},
+        "status": row["status"],
         "created_at": row["created_at"].isoformat(),
+        "updated_at": row["updated_at"].isoformat(),
     }
 
 

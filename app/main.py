@@ -7,8 +7,11 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import close_pool, init_pool
+from app.services.watch_service import stop_all as stop_all_watchers
 from app.routers.files import router as files_router
+from app.routers.glob import router as glob_router
 from app.routers.health import router as health_router
+from app.routers.index import router as index_router
 from app.routers.read import router as read_router
 from app.routers.search import router as search_router
 from app.services.read_service import AmbiguousFilenameError
@@ -24,6 +27,7 @@ async def lifespan(app: FastAPI):
     settings.file_storage_path.mkdir(parents=True, exist_ok=True)
     await init_pool()
     yield
+    stop_all_watchers()
     await close_pool()
 
 
@@ -63,6 +67,8 @@ async def value_error_handler(request: Request, exc: ValueError):
 
 app.include_router(health_router)
 app.include_router(files_router)
+app.include_router(glob_router)
+app.include_router(index_router)
 app.include_router(read_router)
 app.include_router(search_router)
 

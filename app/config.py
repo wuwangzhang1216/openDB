@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     ocr_enabled: bool = True
     ocr_languages: str = "eng+chi_sim+chi_tra"
 
+    # Directory indexing
+    index_max_concurrent: int = 4
+    index_exclude_patterns: list[str] = []
+
+    # Directory watching
+    watch_max_watchers: int = 10
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
