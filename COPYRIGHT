@@ -1,0 +1,23 @@
+MuseDB - cat + grep for any file format
+Copyright (C) 2024-2026  wuwangzhang1216
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+For network services: If you modify this program and run it as a network
+service, you MUST make the complete source code available to users of
+that service. See Section 13 of the AGPL-3.0 license for details.
+
+Contact: https://github.com/wuwangzhang1216/museDB

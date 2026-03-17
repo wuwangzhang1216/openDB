@@ -1,0 +1,65 @@
+[project]
+name = "musedb"
+version = "0.1.0"
+description = "The AI-native file database. Built from the ground up for LLM agents to read and search any document format as plain text."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "AGPL-3.0-or-later"}
+authors = [
+    {name = "wuwangzhang1216", email = "wuwangzhang1216@users.noreply.github.com"}
+]
+maintainers = [
+    {name = "wuwangzhang1216", email = "wuwangzhang1216@users.noreply.github.com"}
+]
+keywords = ["file", "parser", "pdf", "docx", "pptx", "xlsx", "ocr", "ai", "agents", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "asyncpg>=0.29.0",
+    "python-multipart>=0.0.9",
+    "PyMuPDF>=1.24.0",
+    "python-docx>=1.1.0",
+    "python-pptx>=0.6.23",
+    "openpyxl>=3.1.0",
+    "pandas>=2.2.0",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0.0",
+    "python-magic-bin>=0.4.14; sys_platform == 'win32'",
+    "python-magic>=0.4.27; sys_platform != 'win32'",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+    "pytest-cov>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/wuwangzhang1216/museDB"
+Repository = "https://github.com/wuwangzhang1216/museDB"
+Issues = "https://github.com/wuwangzhang1216/museDB/issues"
+Documentation = "https://github.com/wuwangzhang1216/museDB#readme"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  filedb:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      FILEDB_DATABASE_URL: postgresql://musedb:musedb@postgres:5432/musedb
+      FILEDB_FILE_STORAGE_PATH: /data
+    volumes:
+      - filedata:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: musedb
+      POSTGRES_PASSWORD: musedb
+      POSTGRES_DB: musedb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
+  filedata:

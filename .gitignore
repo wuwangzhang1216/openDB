@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+secrets/
+*.pem
+*.key
+*.crt
+*.pfx
+config.local.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Data storage
+data/
+uploads/
+*.log
+logs/
+
+# Benchmark workspace (generated test files)
+benchmark/benchmark_workspace/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal docs
+docs/filedb-design-v1.md
