@@ -1,0 +1,13 @@
+# Sample Document
+
+This is a sample text file for testing the TextParser.
+
+## Section One
+
+The quick brown fox jumps over the lazy dog.
+This paragraph has multiple sentences to test chunking behavior.
+
+## Section Two
+
+Another section with different content.
+Testing heading extraction and page splitting.

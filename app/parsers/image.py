@@ -41,15 +41,14 @@ class ImageParser:
         import pytesseract
         from PIL import Image, ImageEnhance
 
-        image = Image.open(str(file_path))
+        with Image.open(str(file_path)) as image:
+            # Preprocess: grayscale + contrast
+            image = image.convert("L")
+            image = ImageEnhance.Contrast(image).enhance(1.5)
 
-        # Preprocess: grayscale + contrast
-        image = image.convert("L")
-        image = ImageEnhance.Contrast(image).enhance(1.5)
-
-        text = pytesseract.image_to_string(
-            image, lang=settings.ocr_languages
-        )
+            text = pytesseract.image_to_string(
+                image, lang=settings.ocr_languages
+            )
         return text
 
 

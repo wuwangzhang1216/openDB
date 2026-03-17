@@ -24,6 +24,7 @@ CREATE INDEX idx_files_tags ON files USING GIN(tags);
 CREATE INDEX idx_files_metadata ON files USING GIN(metadata jsonb_path_ops);
 CREATE INDEX idx_files_filename ON files USING GIN(filename gin_trgm_ops);
 CREATE INDEX idx_files_created ON files(created_at DESC);
+CREATE UNIQUE INDEX idx_files_checksum_ready ON files(checksum) WHERE status = 'ready';
 
 -- ============================================================
 -- file_text: pre-assembled plain text for /read

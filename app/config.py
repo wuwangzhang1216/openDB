@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     # File storage
     file_storage_path: Path = Path("./data")
     max_file_size: int = 100 * 1024 * 1024  # 100 MB
-    sync_processing_limit: int = 50 * 1024 * 1024  # 50 MB
 
     # OCR
     ocr_enabled: bool = True

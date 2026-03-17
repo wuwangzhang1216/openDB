@@ -5,6 +5,7 @@ Features: text extraction, table detection, scanned page OCR, metadata extractio
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import fitz  # pymupdf
@@ -13,6 +14,8 @@ from app.config import settings
 from app.parsers.base import Page, ParseResult
 from app.parsers.registry import register
 
+logger = logging.getLogger(__name__)
+
 # If a page yields fewer than this many characters, treat as scanned
 SCANNED_THRESHOLD = 50
 
@@ -20,45 +23,46 @@ SCANNED_THRESHOLD = 50
 class PdfParser:
     def parse(self, file_path: Path) -> ParseResult:
         doc = fitz.open(str(file_path))
-        pages: list[Page] = []
-        total_text_len = 0
+        try:
+            pages: list[Page] = []
+            total_text_len = 0
 
-        # First pass: extract text and detect if scanned
-        raw_texts: list[str] = []
-        for page in doc:
-            text = page.get_text()
-            raw_texts.append(text)
-            total_text_len += len(text.strip())
+            # First pass: extract text and detect if scanned
+            raw_texts: list[str] = []
+            for page in doc:
+                text = page.get_text()
+                raw_texts.append(text)
+                total_text_len += len(text.strip())
 
-        avg_text_per_page = total_text_len / max(len(doc), 1)
-        needs_ocr = avg_text_per_page < SCANNED_THRESHOLD and settings.ocr_enabled
+            avg_text_per_page = total_text_len / max(len(doc), 1)
+            needs_ocr = avg_text_per_page < SCANNED_THRESHOLD and settings.ocr_enabled
 
-        for page_num, page in enumerate(doc, start=1):
-            text = raw_texts[page_num - 1]
+            for page_num, page in enumerate(doc, start=1):
+                text = raw_texts[page_num - 1]
 
-            # OCR fallback for scanned pages
-            if needs_ocr and len(text.strip()) < SCANNED_THRESHOLD:
-                text = self._ocr_page(page)
+                # OCR fallback for scanned pages
+                if needs_ocr and len(text.strip()) < SCANNED_THRESHOLD:
+                    text = self._ocr_page(page)
 
-            # Extract tables
-            tables_text = self._extract_tables(page)
-            if tables_text:
-                text = text.rstrip() + "\n\n" + tables_text
+                # Extract tables
+                tables_text = self._extract_tables(page)
+                if tables_text:
+                    text = text.rstrip() + "\n\n" + tables_text
 
-            # Extract section title from first line or large-font text
-            section_title = self._extract_title(page)
+                # Extract section title from first line or large-font text
+                section_title = self._extract_title(page)
 
-            pages.append(
-                Page(
-                    page_number=page_num,
-                    section_title=section_title,
-                    text=text.strip(),
+                pages.append(
+                    Page(
+                        page_number=page_num,
+                        section_title=section_title,
+                        text=text.strip(),
+                    )
                 )
-            )
 
-        # Extract metadata
-        metadata = self._extract_metadata(doc)
-        doc.close()
+            metadata = self._extract_metadata(doc)
+        finally:
+            doc.close()
 
         return ParseResult(pages=pages, extracted_metadata=metadata)
 
@@ -70,7 +74,10 @@ class PdfParser:
             import io
 
             pix = page.get_pixmap(dpi=300)
-            img_bytes = pix.tobytes("png")
+            try:
+                img_bytes = pix.tobytes("png")
+            finally:
+                pix = None  # Release native pixmap memory
             image = Image.open(io.BytesIO(img_bytes))
 
             # Preprocess: grayscale + contrast
@@ -83,6 +90,7 @@ class PdfParser:
             )
             return text
         except Exception:
+            logger.warning("OCR failed for page %s", page.number, exc_info=True)
             return ""
 
     def _extract_tables(self, page: fitz.Page) -> str:
@@ -116,6 +124,7 @@ class PdfParser:
 
             return "\n\n".join(parts)
         except Exception:
+            logger.debug("Table extraction failed for page %s", page.number, exc_info=True)
             return ""
 
     def _extract_title(self, page: fitz.Page) -> str | None:

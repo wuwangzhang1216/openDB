@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,10 @@ from app.services.read_service import FileNotFoundError as FileDBNotFoundError
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
     settings.file_storage_path.mkdir(parents=True, exist_ok=True)
     await init_pool()
     yield

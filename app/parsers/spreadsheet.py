@@ -6,10 +6,13 @@ CSV: pandas, treated as single-sheet XLSX.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from app.parsers.base import Page, ParseResult
 from app.parsers.registry import register
+
+logger = logging.getLogger(__name__)
 
 ROWS_PER_PAGE = 100
 HEADER_REPEAT_INTERVAL = 50
@@ -20,49 +23,51 @@ class XlsxParser:
         import openpyxl
 
         wb = openpyxl.load_workbook(str(file_path), read_only=True, data_only=True)
-        pages: list[Page] = []
-        page_num = 0
+        try:
+            pages: list[Page] = []
+            page_num = 0
 
-        for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-            rows = list(ws.iter_rows(values_only=True))
-            if not rows:
-                page_num += 1
-                pages.append(
-                    Page(
-                        page_number=page_num,
-                        section_title=sheet_name,
-                        text=f"(empty sheet: {sheet_name})",
+            for sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows:
+                    page_num += 1
+                    pages.append(
+                        Page(
+                            page_number=page_num,
+                            section_title=sheet_name,
+                            text=f"(empty sheet: {sheet_name})",
+                        )
                     )
-                )
-                continue
+                    continue
 
-            # First row as headers
-            headers = [str(c) if c is not None else "" for c in rows[0]]
-            data_rows = rows[1:]
+                # First row as headers
+                headers = [str(c) if c is not None else "" for c in rows[0]]
+                data_rows = rows[1:]
 
-            # Split into chunks of ROWS_PER_PAGE
-            for chunk_start in range(0, max(len(data_rows), 1), ROWS_PER_PAGE):
-                page_num += 1
-                chunk = data_rows[chunk_start: chunk_start + ROWS_PER_PAGE]
+                # Split into chunks of ROWS_PER_PAGE
+                for chunk_start in range(0, max(len(data_rows), 1), ROWS_PER_PAGE):
+                    page_num += 1
+                    chunk = data_rows[chunk_start: chunk_start + ROWS_PER_PAGE]
 
-                text = self._format_rows(headers, chunk, chunk_start)
-                suffix = ""
-                if len(data_rows) > ROWS_PER_PAGE:
-                    row_start = chunk_start + 2  # +2: 1-indexed + header row
-                    row_end = row_start + len(chunk) - 1
-                    suffix = f" - rows {row_start}-{row_end}"
+                    text = self._format_rows(headers, chunk, chunk_start)
+                    suffix = ""
+                    if len(data_rows) > ROWS_PER_PAGE:
+                        row_start = chunk_start + 2  # +2: 1-indexed + header row
+                        row_end = row_start + len(chunk) - 1
+                        suffix = f" - rows {row_start}-{row_end}"
 
-                pages.append(
-                    Page(
-                        page_number=page_num,
-                        section_title=f"{sheet_name}{suffix}" if suffix else sheet_name,
-                        text=text.strip(),
+                    pages.append(
+                        Page(
+                            page_number=page_num,
+                            section_title=f"{sheet_name}{suffix}" if suffix else sheet_name,
+                            text=text.strip(),
+                        )
                     )
-                )
 
-        metadata = self._extract_metadata(wb)
-        wb.close()
+            metadata = self._extract_metadata(wb)
+        finally:
+            wb.close()
         return ParseResult(pages=pages, extracted_metadata=metadata)
 
     def _format_rows(
@@ -106,7 +111,7 @@ class XlsxParser:
                 result["modified"] = props.modified.isoformat()
             result["sheet_names"] = wb.sheetnames
         except Exception:
-            pass
+            logger.warning("XLSX metadata extraction failed", exc_info=True)
         return result
 
 
