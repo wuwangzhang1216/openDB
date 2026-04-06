@@ -409,6 +409,18 @@ class SQLiteBackend:
             rows = await cur.fetchall()
         return [{"id": r["id"], "filename": r["filename"]} for r in rows]
 
+    async def find_by_source_path_suffix(self, suffix: str) -> list[dict]:
+        norm = suffix.replace("\\", "/").lstrip("/")
+        pattern = "%/" + norm
+        async with self._db.execute(
+            "SELECT id, filename FROM files "
+            "WHERE json_extract(metadata, '$.source_path') LIKE ? "
+            "AND status = 'ready'",
+            (pattern,),
+        ) as cur:
+            rows = await cur.fetchall()
+        return [{"id": r["id"], "filename": r["filename"]} for r in rows]
+
     # ------------------------------------------------------------------
     # Search
     # ------------------------------------------------------------------

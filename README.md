@@ -579,7 +579,7 @@ With MuseDB:
 read_file("report.pdf")  # 50 tokens, always works
 ```
 
-**Benchmarked across 4 LLMs on 24 document tasks:**
+**Benchmarked across 4 LLMs on 24 document tasks (vs CMD agent):**
 
 | Metric | Without MuseDB | With MuseDB |
 |--------|---------------|-------------|
@@ -587,6 +587,16 @@ read_file("report.pdf")  # 50 tokens, always works
 | Task speed | 100% | **36-58%** faster |
 | Answer quality | 2.4-3.2 / 5 | **3.4-3.9 / 5** |
 | Success rate | 79% (19/24) | **100% (24/24)** |
+
+**MuseDB FTS vs RAG vector retrieval (25-325 docs, scaled benchmark):**
+
+| Scale | Docs | FTS Tokens | RAG Tokens | FTS Saves | FTS Quality | RAG Quality |
+|-------|------|-----------|-----------|-----------|------------|------------|
+| small | 25 | 83,543 | 157,589 | **47%** | 3.9/5 | 4.2/5 |
+| medium | 125 | 76,460 | 136,543 | **44%** | **4.7/5** | 4.0/5 |
+| large | 325 | 62,241 | 113,031 | **45%** | **4.6/5** | 3.5/5 |
+
+FTS keyword search saves 44-47% tokens vs vector retrieval at all scales, and **answer quality improves with scale** while RAG degrades from distractor noise.
 
 See [benchmark/REPORT.md](benchmark/REPORT.md) for full methodology.
 

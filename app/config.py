@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     port: int = 8000
     cors_origins: list[str] = ["*"]
 
-    model_config = {"env_prefix": "FILEDB_", "env_file": ".env"}
+    model_config = {"env_prefix": "FILEDB_", "env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()

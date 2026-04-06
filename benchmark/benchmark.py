@@ -48,8 +48,10 @@ set_tracing_disabled(True)
 # ============================================================
 
 FILEDB_URL = "http://localhost:8000"
-WORKSPACE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_workspace")
 BENCHMARK_DIR = os.path.dirname(os.path.abspath(__file__))
+# WORKSPACE_DIR is resolved at runtime from --scale (defaults to legacy benchmark_workspace/)
+WORKSPACE_DIR = os.path.join(BENCHMARK_DIR, "benchmark_workspace")
+SCALE = "small"  # mutated in main() per --scale flag
 
 # OpenRouter client with provider preferences
 _openrouter_client = AsyncOpenAI(
@@ -220,6 +222,37 @@ def filedb_get_file_toc(filename: str) -> str:
 
 
 # ============================================================
+# RAG Agent Tools (vector retrieval alternative to FileDB's FTS)
+# ============================================================
+
+# Built once at startup (see main()), reused across all RAG agent calls.
+_rag_index = None  # type: ignore[assignment]
+
+
+@function_tool(name_override="semantic_search")
+async def rag_semantic_search(query: str, k: int = 5) -> str:
+    """Semantic similarity search over document chunks using vector embeddings. Returns top-k relevant passages.
+
+    Args:
+        query: Natural-language search query.
+        k: Number of chunks to return (default 5, raise to 10-20 if results are insufficient).
+    """
+    if _rag_index is None:
+        return "Error: RAG index not initialised."
+    try:
+        hits = await _rag_index.search(query, k=k)
+    except Exception as e:
+        return f"Error: {e}"
+    if not hits:
+        return f"No semantic matches for '{query}'."
+    lines = [f"Top {len(hits)} semantic matches for '{query}':"]
+    for h in hits:
+        snippet = h["chunk_text"].replace("\n", " ")[:200]
+        lines.append(f"  - {h['filename']} (score={h['score']:.3f}): {snippet}")
+    return "\n".join(lines)
+
+
+# ============================================================
 # Agent Definitions
 # ============================================================
 
@@ -267,6 +300,23 @@ Strategy tips:
 - Be thorough but efficient
 """
 
+RAG_INSTRUCTIONS = """\
+You are a document analysis assistant. You have access to a document repository
+via semantic search and file reading tools. The repository is indexed with
+vector embeddings — semantic_search finds passages by meaning, not by keyword.
+
+Available tools:
+- list_files: See what files are available (can filter by department tag)
+- semantic_search: Vector similarity search over chunked passages — returns top-k most semantically related excerpts
+- read_file: Read a file with optional grep/page/line filtering (use this when chunks are not enough)
+
+Strategy tips:
+- Use semantic_search first for any natural-language question
+- Start with k=5; if the results don't cover the question, call again with k=10 or k=20
+- Note that semantic_search returns passage excerpts, not full files — use read_file when you need full context
+- Be thorough but efficient
+"""
+
 
 def _build_agents(model_instance, agents_to_run: list[str]) -> dict:
     """Build agent map based on selected agent names."""
@@ -283,6 +333,13 @@ def _build_agents(model_instance, agents_to_run: list[str]) -> dict:
             name="FileDB Agent",
             instructions=FILEDB_INSTRUCTIONS,
             tools=[filedb_list_files, filedb_read_file, filedb_search_documents, filedb_get_file_toc],
+            model=model_instance,
+        )
+    if "rag" in agents_to_run:
+        agent_map["RAG"] = Agent(
+            name="RAG Agent",
+            instructions=RAG_INSTRUCTIONS,
+            tools=[filedb_list_files, rag_semantic_search, filedb_read_file],
             model=model_instance,
         )
     return agent_map
@@ -528,11 +585,12 @@ async def run_benchmark(tasks_to_run: list[dict], agents_to_run: list[str],
                       if os.path.isfile(os.path.join(WORKSPACE_DIR, f))])
     print(f"Local files: {file_count}")
 
-    # Verify FileDB connectivity (if filedb agent is selected)
-    if "filedb" in agents_to_run:
+    # Verify FileDB connectivity (if filedb or rag agent is selected)
+    if "filedb" in agents_to_run or "rag" in agents_to_run:
         try:
-            resp = httpx.get(f"{FILEDB_URL}/health", timeout=5)
-            print(f"FileDB health: {resp.json()}")
+            resp = httpx.get(f"{FILEDB_URL}/files", params={"limit": 1}, timeout=5)
+            total = resp.json().get("total", "?")
+            print(f"FileDB connected: {total} files indexed")
         except Exception as e:
             print(f"\nERROR: Cannot connect to FileDB at {FILEDB_URL}: {e}")
             print("Make sure FileDB is running.")
@@ -1020,8 +1078,11 @@ if __name__ == "__main__":
                         help="Model(s) to benchmark via OpenRouter")
     parser.add_argument("--tasks", nargs="*", help="Run specific task IDs (e.g. T1 T3 T5)")
     parser.add_argument("--agents", nargs="*", default=["cmd", "filedb"],
-                        choices=["cmd", "filedb"],
+                        choices=["cmd", "filedb", "rag"],
                         help="Agent(s) to run (default: cmd filedb)")
+    parser.add_argument("--scale", default="small",
+                        choices=["small", "medium", "large"],
+                        help="Workspace scale: small=25 docs, medium=125, large=325")
     parser.add_argument("--runs", type=int, default=1,
                         help="Number of runs per task (default: 1)")
     parser.add_argument("--concurrency", type=int, default=8,
@@ -1035,6 +1096,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FILEDB_URL = args.url
+    SCALE = args.scale
+    # Resolve scaled workspace dir; fall back to legacy benchmark_workspace/ for 'small'.
+    scaled_dir = os.path.join(BENCHMARK_DIR, f"benchmark_workspace_{SCALE}")
+    if os.path.isdir(scaled_dir):
+        WORKSPACE_DIR = scaled_dir
+    elif SCALE != "small":
+        print(f"ERROR: Scaled workspace not found: {scaled_dir}")
+        print(f"Run: python gen_distractors.py  (to build pool + assemble workspaces)")
+        sys.exit(1)
+    print(f"Scale: {SCALE}  |  Workspace: {WORKSPACE_DIR}")
 
     tasks_to_run = TASKS
     if args.tasks:
@@ -1049,6 +1120,24 @@ if __name__ == "__main__":
 
     # Run benchmark + optional judge in one event loop
     async def _main():
+        # Bootstrap RAG index if needed (cached per scale).
+        if "rag" in args.agents:
+            global _rag_index
+            from rag_index import RAGIndex
+            _rag_index = RAGIndex()
+            cache_path = Path(BENCHMARK_DIR) / f"rag_index_{SCALE}.npz"
+            if cache_path.exists():
+                _rag_index.load(cache_path)
+                print(f"Loaded RAG index [{SCALE}]: {_rag_index.stats()}")
+            else:
+                if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY")):
+                    print("ERROR: OPENROUTER_API_KEY or OPENAI_API_KEY required for RAG embedding.")
+                    sys.exit(1)
+                print(f"Building RAG index for scale={SCALE} (one-time)...")
+                await _rag_index.build(FILEDB_URL)
+                _rag_index.save(cache_path)
+                print(f"Indexed: {_rag_index.stats()}")
+
         results = await run_benchmark(
             tasks_to_run, args.agents, args.model, args.runs, args.concurrency
         )

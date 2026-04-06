@@ -326,6 +326,19 @@ class PostgresBackend:
             )
         return [{"id": str(r["id"]), "filename": r["filename"]} for r in rows]
 
+    async def find_by_source_path_suffix(self, suffix: str) -> list[dict]:
+        norm = suffix.replace("\\", "/").lstrip("/")
+        pattern = "%/" + norm
+        from musedb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT id, filename FROM files "
+                "WHERE metadata->>'source_path' LIKE $1 AND status = 'ready'",
+                pattern,
+            )
+        return [{"id": str(r["id"]), "filename": r["filename"]} for r in rows]
+
     # ------------------------------------------------------------------
     # Search
     # ------------------------------------------------------------------

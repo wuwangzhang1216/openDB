@@ -116,6 +116,14 @@ class StorageBackend(Protocol):
         """Substring match (ILIKE %pattern%) → list of {id, filename} dicts."""
         ...
 
+    async def find_by_source_path_suffix(self, suffix: str) -> list[dict]:
+        """Match files whose source_path ends with '/<suffix>'.
+
+        Used when caller passes a path-like filename (contains / or \\).
+        Returns [{id, filename}, ...]; empty if no match.
+        """
+        ...
+
     # ------------------------------------------------------------------
     # Search
     # ------------------------------------------------------------------

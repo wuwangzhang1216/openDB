@@ -131,12 +131,16 @@ async def search(
     if not results:
         return f"No results found for '{query}'"
 
-    lines_out = [f"Found {total} results:"]
-    lines_out.append("")
+    # Split grep vs fts results (grep rows have 'file' key, fts rows have 'filename').
+    grep_rows = [r for r in results if r.get("file")]
+    fts_rows = [r for r in results if not r.get("file") and r.get("filename")]
 
-    for r in results:
-        if "file" in r and r["file"]:
-            # Grep mode result
+    lines_out: list[str] = []
+
+    if grep_rows:
+        lines_out.append(f"Found {total} results:")
+        lines_out.append("")
+        for r in grep_rows:
             ctx_before = r.get("context_before", [])
             ctx_after = r.get("context_after", [])
             if ctx_before:
@@ -149,17 +153,38 @@ async def search(
                     ln = r["line"] + 1 + j
                     lines_out.append(f"  {r['file']}:{ln}: {cl}")
             lines_out.append("")
-        else:
-            # FTS mode result
-            score = r.get("relevance_score", 0)
-            page = r.get("page_number", "?")
-            section = r.get("section_title", "")
-            highlight = r.get("highlight", "")
-            loc = f"page {page}"
+
+    if fts_rows:
+        # Group FTS results by filename, preserving the order of first appearance
+        # (input is already sorted best-match first, so the first row per file is its best).
+        groups: dict[str, list[dict]] = {}
+        for r in fts_rows:
+            groups.setdefault(r["filename"], []).append(r)
+
+        lines_out.append(f"Found {total} matches across {len(groups)} files:")
+        lines_out.append("")
+        for filename, rows in groups.items():
+            best = rows[0]
+            score = best.get("relevance_score", 0)
+            best_page = best.get("page_number", "?")
+            section = best.get("section_title", "")
+            highlight = best.get("highlight", "")
+            loc = f"page {best_page}"
             if section:
                 loc = f"{section} ({loc})"
-            lines_out.append(f"  {r['filename']} — {loc} [score: {score}]")
+            match_count = len(rows)
+            header = (
+                f"  {filename} ({match_count} match{'es' if match_count != 1 else ''}, "
+                f"best: {loc}) [score: {score}]"
+            )
+            lines_out.append(header)
             lines_out.append(f"    {highlight}")
+            if match_count > 1:
+                other_pages = [str(r.get("page_number", "?")) for r in rows[1:]]
+                # Cap list to keep the line compact
+                shown = ", ".join(other_pages[:10])
+                suffix = f" (+{len(other_pages) - 10} more)" if len(other_pages) > 10 else ""
+                lines_out.append(f"    also on pages: {shown}{suffix}")
             lines_out.append("")
 
     if data.get("truncated"):

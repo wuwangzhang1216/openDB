@@ -1,0 +1,8 @@
+# Generated workspaces and caches
+benchmark_workspace_*/
+benchmark_workspace/
+distractors_pool/
+rag_index_*.npz
+rag_index_*.json
+.env
+__pycache__/

@@ -30,7 +30,7 @@ class FileNotFoundError(Exception):
 async def resolve_filename(filename: str) -> UUID:
     """Resolve a filename to a file UUID.
 
-    Resolution order: exact → UUID → fuzzy → unique substring.
+    Resolution order: exact → UUID → path-aware → fuzzy → unique substring.
     """
     backend = get_backend()
 
@@ -44,7 +44,20 @@ async def resolve_filename(filename: str) -> UUID:
     if fid:
         return UUID(fid)
 
-    # 3. Fuzzy match
+    # 3. Path-aware match — bridge for glob → read and grep → read handoffs.
+    # When the caller passes a relative path like "docs/report.pdf", match it
+    # as a boundary-aware suffix of files.metadata.source_path.
+    if "/" in filename or "\\" in filename:
+        path_rows = await backend.find_by_source_path_suffix(filename)
+        if len(path_rows) == 1:
+            return UUID(path_rows[0]["id"])
+        if len(path_rows) > 1:
+            raise AmbiguousFilenameError(
+                candidates=[{"id": r["id"], "filename": r["filename"]} for r in path_rows]
+            )
+        # 0 matches → fall through; a path-looking string may still basename-match.
+
+    # 4. Fuzzy match
     rows = await backend.find_files_fuzzy(filename)
     if len(rows) == 1:
         return UUID(rows[0]["id"])
@@ -55,7 +68,7 @@ async def resolve_filename(filename: str) -> UUID:
             candidates=[{"id": r["id"], "filename": r["filename"]} for r in rows]
         )
 
-    # 4. Unique substring match
+    # 5. Unique substring match
     rows = await backend.find_files_ilike(filename)
     if len(rows) == 1:
         return UUID(rows[0]["id"])
