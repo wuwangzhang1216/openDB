@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/opendb/"><img src="https://img.shields.io/pypi/v/opendb" alt="PyPI version"/></a>
+  <a href="https://pypi.org/project/open-db/"><img src="https://img.shields.io/pypi/v/open-db" alt="PyPI version"/></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"/></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
   <a href="https://github.com/wuwangzhang1216/openDB/stargazers"><img src="https://img.shields.io/github/stars/wuwangzhang1216/openDB" alt="GitHub stars"/></a>
@@ -19,7 +19,7 @@
 ---
 
 ```bash
-pip install opendb[cli]
+pip install open-db[cli]
 opendb index ./my_workspace
 opendb serve-mcp
 ```
@@ -385,7 +385,9 @@ Environment variables (`FILEDB_` prefix):
 | `FILEDB_INDEX_EXCLUDE_PATTERNS` | `[]` | Exclude patterns for indexing |
 | `OPENDB_URL` | `http://localhost:8000` | MCP server → REST API URL |
 
-## Development
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
 pip install -e ".[dev]"

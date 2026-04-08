@@ -1,5 +1,5 @@
 [project]
-name = "opendb"
+name = "open-db"
 version = "1.3.0"
 description = "The AI-native file database and memory store. Built for LLM agents to read, search, and remember."
 readme = "README.md"

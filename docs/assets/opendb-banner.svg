@@ -14,7 +14,7 @@
   <!-- OpenDB Text -->
   <g transform="translate(280, 150)">
     <text x="0" y="0" font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="72" fill="white" font-weight="700">
-      Muse<tspan fill="#888">DB</tspan>
+      Open<tspan fill="#888">DB</tspan>
     </text>
   </g>
 
@@ -31,6 +31,6 @@
   <!-- Version badge -->
   <g transform="translate(280, 230)">
     <rect x="0" y="0" width="52" height="22" rx="4" fill="#888" opacity="0.15"/>
-    <text x="26" y="15" font-family="'SF Mono', 'Fira Code', monospace" font-size="12" fill="#888" text-anchor="middle" font-weight="600">v1.0</text>
+    <text x="26" y="15" font-family="'SF Mono', 'Fira Code', monospace" font-size="12" fill="#888" text-anchor="middle" font-weight="600">v1.3</text>
   </g>
 </svg>
