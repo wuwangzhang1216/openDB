@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openDB Brand Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --slate: #0f172a;
+    --slate-800: #1e293b;
+    --slate-600: #475569;
+    --slate-400: #94a3b8;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --slate-50: #f8fafc;
+    --white: #ffffff;
+    --indigo: #6366f1;
+    --emerald: #059669;
+    --cyan: #0891b2;
+    --red: #ef4444;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white);
+    color: var(--slate);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  .header {
+    padding: 80px 60px 60px;
+    border-bottom: 1px solid var(--slate-200);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+  }
+  .header p {
+    font-size: 16px;
+    color: var(--slate-600);
+    max-width: 480px;
+  }
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--slate-100);
+    color: var(--slate-600);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-top: 12px;
+  }
+
+  /* Sections */
+  .section {
+    padding: 60px;
+    border-bottom: 1px solid var(--slate-200);
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--slate-400);
+    margin-bottom: 36px;
+  }
+
+  /* Logo grid */
+  .logo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .logo-card {
+    border: 1px solid var(--slate-200);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .logo-card .preview {
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-card .preview.light { background: var(--slate-50); }
+  .logo-card .preview.dark { background: var(--slate); }
+  .logo-card .meta {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--slate-200);
+  }
+  .logo-card .meta span {
+    font-size: 13px;
+    color: var(--slate-600);
+  }
+  .dl-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border: 1px solid var(--slate-200);
+    border-radius: 6px;
+    background: var(--white);
+    color: var(--slate);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dl-btn:hover { background: var(--slate); color: var(--white); }
+
+  /* Color palette */
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .swatch {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--slate-200);
+  }
+  .swatch .color-block {
+    height: 100px;
+  }
+  .swatch .color-info {
+    padding: 14px 16px;
+    background: var(--white);
+  }
+  .swatch .color-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .swatch .color-hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--slate-400);
+  }
+
+  /* Typography */
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 40px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--slate-100);
+  }
+  .type-label {
+    width: 120px;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--slate-400);
+  }
+  .type-sample { flex: 1; }
+
+  /* Spacing / clearspace */
+  .clearspace-demo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    background: var(--slate-50);
+    border-radius: 16px;
+    position: relative;
+  }
+  .clearspace-demo .guide {
+    position: absolute;
+    border: 1px dashed var(--red);
+  }
+
+  /* Don'ts */
+  .donts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .dont-card {
+    background: var(--slate-50);
+    border-radius: 12px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .dont-card .x {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .dont-card .reason {
+    font-size: 13px;
+    color: var(--slate-600);
+    text-align: center;
+  }
+
+  /* Favicon sizes */
+  .sizes-row {
+    display: flex;
+    align-items: end;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .size-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .size-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--slate-400);
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <svg width="56" height="56" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="17" fill="#0f172a"/>
+      <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+      <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+    </svg>
+    <h1>openDB Brand Kit</h1>
+  </div>
+  <p>Guidelines for consistent use of the openDB identity across products, docs, and marketing.</p>
+  <span class="badge">v1.0 — April 2026</span>
+</div>
+
+<!-- 01 PRIMARY LOGO -->
+<div class="section">
+  <div class="section-title">01 — Primary logo</div>
+  <div class="logo-grid">
+    <!-- Icon on light -->
+    <div class="logo-card">
+      <div class="preview light">
+        <svg width="96" height="96" viewBox="0 0 80 80">
+          <rect width="80" height="80" rx="17" fill="#0f172a"/>
+          <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+          <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="meta">
+        <span>Icon mark — light bg</span>
+        <button class="dl-btn" onclick="downloadSVG('icon-dark','opendb-icon-dark.svg')">SVG ↓</button>
+      </div>
+    </div>
+    <!-- Icon on dark -->
+    <div class="logo-card">
+      <div class="preview dark">
+        <svg width="96" height="96" viewBox="0 0 80 80">
+          <rect width="80" height="80" rx="17" fill="#fff"/>
+          <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#0f172a"/>
+          <rect x="0" y="33" width="28" height="14" fill="#0f172a"/>
+        </svg>
+      </div>
+      <div class="meta">
+        <span>Icon mark — dark bg</span>
+        <button class="dl-btn" onclick="downloadSVG('icon-light','opendb-icon-light.svg')">SVG ↓</button>
+      </div>
+    </div>
+    <!-- Horizontal lockup light -->
+    <div class="logo-card">
+      <div class="preview light">
+        <svg width="240" height="56" viewBox="0 0 240 56">
+          <rect width="56" height="56" rx="12" fill="#0f172a"/>
+          <path d="M13,13 L30,13 Q41,13 41,28 Q41,43 30,43 L13,43 L13,34 L30,34 Q34,34 34,28 Q34,22 30,22 L13,22 Z" fill="#fff"/>
+          <rect x="0" y="24" width="19" height="8" fill="#fff"/>
+          <text x="70" y="34" font-family="DM Sans,sans-serif" font-size="24" font-weight="700" fill="#0f172a" letter-spacing="-0.8">openDB</text>
+        </svg>
+      </div>
+      <div class="meta">
+        <span>Lockup — light bg</span>
+        <button class="dl-btn" onclick="downloadSVG('lockup-dark','opendb-lockup-dark.svg')">SVG ↓</button>
+      </div>
+    </div>
+    <!-- Horizontal lockup dark -->
+    <div class="logo-card">
+      <div class="preview dark">
+        <svg width="240" height="56" viewBox="0 0 240 56">
+          <rect width="56" height="56" rx="12" fill="#fff"/>
+          <path d="M13,13 L30,13 Q41,13 41,28 Q41,43 30,43 L13,43 L13,34 L30,34 Q34,34 34,28 Q34,22 30,22 L13,22 Z" fill="#0f172a"/>
+          <rect x="0" y="24" width="19" height="8" fill="#0f172a"/>
+          <text x="70" y="34" font-family="DM Sans,sans-serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="-0.8">openDB</text>
+        </svg>
+      </div>
+      <div class="meta">
+        <span>Lockup — dark bg</span>
+        <button class="dl-btn" onclick="downloadSVG('lockup-light','opendb-lockup-light.svg')">SVG ↓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 02 COLOR PALETTE -->
+<div class="section">
+  <div class="section-title">02 — Color palette</div>
+  <div class="palette">
+    <div class="swatch">
+      <div class="color-block" style="background:#0f172a"></div>
+      <div class="color-info">
+        <div class="color-name">Slate 900</div>
+        <div class="color-hex">#0F172A</div>
+        <div class="color-hex" style="margin-top:2px">Primary brand</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#1e293b"></div>
+      <div class="color-info">
+        <div class="color-name">Slate 800</div>
+        <div class="color-hex">#1E293B</div>
+        <div class="color-hex" style="margin-top:2px">Hover / secondary</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#475569"></div>
+      <div class="color-info">
+        <div class="color-name">Slate 600</div>
+        <div class="color-hex">#475569</div>
+        <div class="color-hex" style="margin-top:2px">Body text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#f1f5f9"></div>
+      <div class="color-info">
+        <div class="color-name">Slate 100</div>
+        <div class="color-hex">#F1F5F9</div>
+        <div class="color-hex" style="margin-top:2px">Background</div>
+      </div>
+    </div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="palette">
+    <div class="swatch">
+      <div class="color-block" style="background:#6366f1"></div>
+      <div class="color-info">
+        <div class="color-name">Indigo</div>
+        <div class="color-hex">#6366F1</div>
+        <div class="color-hex" style="margin-top:2px">Accent / CTA</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#059669"></div>
+      <div class="color-info">
+        <div class="color-name">Emerald</div>
+        <div class="color-hex">#059669</div>
+        <div class="color-hex" style="margin-top:2px">Success</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#0891b2"></div>
+      <div class="color-info">
+        <div class="color-name">Cyan</div>
+        <div class="color-hex">#0891B2</div>
+        <div class="color-hex" style="margin-top:2px">Info / links</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background:#ef4444"></div>
+      <div class="color-info">
+        <div class="color-name">Red</div>
+        <div class="color-hex">#EF4444</div>
+        <div class="color-hex" style="margin-top:2px">Error / danger</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 TYPOGRAPHY -->
+<div class="section">
+  <div class="section-title">03 — Typography</div>
+  <div class="type-row">
+    <div class="type-label">Display<br>DM Sans 700</div>
+    <div class="type-sample" style="font-size:36px;font-weight:700;letter-spacing:-1.2px">The open database layer</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Heading<br>DM Sans 600</div>
+    <div class="type-sample" style="font-size:24px;font-weight:600;letter-spacing:-0.5px">Local-first, privacy-native</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Body<br>DM Sans 400</div>
+    <div class="type-sample" style="font-size:16px;color:var(--slate-600)">openDB is a lightweight, embeddable database engine designed for AI-native applications. It runs entirely on your machine with zero cloud dependencies.</div>
+  </div>
+  <div class="type-row" style="border:none">
+    <div class="type-label">Code<br>JetBrains Mono</div>
+    <div class="type-sample" style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--slate-600);background:var(--slate-50);padding:16px;border-radius:8px">
+      import { openDB } from 'opendb'<br>
+      const db = await openDB('myapp')
+    </div>
+  </div>
+</div>
+
+<!-- 04 CLEAR SPACE & SIZING -->
+<div class="section">
+  <div class="section-title">04 — Clear space & minimum size</div>
+  <div class="clearspace-demo">
+    <svg width="96" height="96" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="17" fill="#0f172a"/>
+      <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+      <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+    </svg>
+    <!-- Dashed guides -->
+    <div class="guide" style="top:24px;left:50%;transform:translateX(-86px);width:1px;height:calc(100% - 48px);border-left:1px dashed #ef4444"></div>
+    <div class="guide" style="top:24px;right:50%;transform:translateX(86px);width:1px;height:calc(100% - 48px);border-left:1px dashed #ef4444"></div>
+    <div class="guide" style="left:24px;top:50%;transform:translateY(-66px);height:1px;width:calc(100% - 48px);border-top:1px dashed #ef4444"></div>
+    <div class="guide" style="left:24px;bottom:50%;transform:translateY(66px);height:1px;width:calc(100% - 48px);border-top:1px dashed #ef4444"></div>
+    <span style="position:absolute;top:50%;right:calc(50% - 116px);font-family:'JetBrains Mono',monospace;font-size:11px;color:#ef4444;transform:translateY(-50%)">x</span>
+    <span style="position:absolute;left:50%;bottom:calc(50% - 78px);font-family:'JetBrains Mono',monospace;font-size:11px;color:#ef4444;transform:translateX(-50%)">x</span>
+  </div>
+  <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--slate-400)">Minimum clear space = the height of the slit (x). Minimum icon size = 16×16px.</p>
+
+  <div style="margin-top:40px">
+    <div class="sizes-row">
+      <div class="size-item">
+        <svg width="16" height="16" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">16px</span>
+      </div>
+      <div class="size-item">
+        <svg width="24" height="24" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">24px</span>
+      </div>
+      <div class="size-item">
+        <svg width="32" height="32" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">32px</span>
+      </div>
+      <div class="size-item">
+        <svg width="48" height="48" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">48px</span>
+      </div>
+      <div class="size-item">
+        <svg width="64" height="64" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">64px</span>
+      </div>
+      <div class="size-item">
+        <svg width="96" height="96" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">96px</span>
+      </div>
+      <div class="size-item">
+        <svg width="128" height="128" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>
+        <span class="size-label">128px</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 DON'TS -->
+<div class="section">
+  <div class="section-title">05 — Misuse</div>
+  <div class="donts-grid">
+    <div class="dont-card">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="17" fill="#0f172a" transform="rotate(15,40,40)"/>
+        <g transform="rotate(15,40,40)">
+          <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+          <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+        </g>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Rotate or skew the logo</span>
+    </div>
+    <div class="dont-card">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="17" fill="#0f172a"/>
+        <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#ff6b6b"/>
+        <rect x="0" y="33" width="28" height="14" fill="#ff6b6b"/>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Recolor the inner mark</span>
+    </div>
+    <div class="dont-card">
+      <svg width="64" height="64" viewBox="0 0 80 80" style="opacity:0.3">
+        <rect width="80" height="80" rx="17" fill="#0f172a"/>
+        <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+        <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Use low opacity or watermarks</span>
+    </div>
+    <div class="dont-card">
+      <svg width="80" height="64" viewBox="0 0 100 80">
+        <rect width="100" height="80" rx="17" fill="#0f172a"/>
+        <path d="M24,18 L52,18 Q68,18 68,40 Q68,62 52,62 L24,62 L24,46 L52,46 Q58,46 58,40 Q58,34 52,34 L24,34 Z" fill="#fff"/>
+        <rect x="0" y="33" width="34" height="14" fill="#fff"/>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Stretch or distort proportions</span>
+    </div>
+    <div class="dont-card">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="17" fill="#0f172a" filter="url(#shadow)"/>
+        <defs><filter id="shadow"><feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter></defs>
+        <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+        <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Add shadows or effects</span>
+    </div>
+    <div class="dont-card">
+      <svg width="64" height="64" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="17" fill="#0f172a" stroke="#6366f1" stroke-width="4"/>
+        <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+        <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+      </svg>
+      <span class="x">✕ Don't</span>
+      <span class="reason">Add outlines or borders</span>
+    </div>
+  </div>
+</div>
+
+<!-- 06 ASSETS -->
+<div class="section" style="border:none">
+  <div class="section-title">06 — Downloadable assets</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <button class="dl-btn" onclick="downloadSVG('icon-dark','opendb-icon-dark.svg')" style="padding:12px 20px;font-size:13px">Icon (dark) .svg</button>
+    <button class="dl-btn" onclick="downloadSVG('icon-light','opendb-icon-light.svg')" style="padding:12px 20px;font-size:13px">Icon (light) .svg</button>
+    <button class="dl-btn" onclick="downloadSVG('lockup-dark','opendb-lockup-dark.svg')" style="padding:12px 20px;font-size:13px">Lockup (dark) .svg</button>
+    <button class="dl-btn" onclick="downloadSVG('lockup-light','opendb-lockup-light.svg')" style="padding:12px 20px;font-size:13px">Lockup (light) .svg</button>
+  </div>
+</div>
+
+<script>
+const svgs = {
+  'icon-dark': `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#0f172a"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/><rect x="0" y="33" width="28" height="14" fill="#fff"/></svg>`,
+  'icon-light': `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 80 80"><rect width="80" height="80" rx="17" fill="#fff"/><path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#0f172a"/><rect x="0" y="33" width="28" height="14" fill="#0f172a"/></svg>`,
+  'lockup-dark': `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="224" viewBox="0 0 240 56"><rect width="56" height="56" rx="12" fill="#0f172a"/><path d="M13,13 L30,13 Q41,13 41,28 Q41,43 30,43 L13,43 L13,34 L30,34 Q34,34 34,28 Q34,22 30,22 L13,22 Z" fill="#fff"/><rect x="0" y="24" width="19" height="8" fill="#fff"/><text x="70" y="34" font-family="DM Sans,sans-serif" font-size="24" font-weight="700" fill="#0f172a" letter-spacing="-0.8">openDB</text></svg>`,
+  'lockup-light': `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="224" viewBox="0 0 240 56"><rect width="56" height="56" rx="12" fill="#fff"/><path d="M13,13 L30,13 Q41,13 41,28 Q41,43 30,43 L13,43 L13,34 L30,34 Q34,34 34,28 Q34,22 30,22 L13,22 Z" fill="#0f172a"/><rect x="0" y="24" width="19" height="8" fill="#0f172a"/><text x="70" y="34" font-family="DM Sans,sans-serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="-0.8">openDB</text></svg>`
+};
+
+function downloadSVG(id, filename) {
+  const blob = new Blob([svgs[id]], {type:'image/svg+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

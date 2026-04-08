@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>3 lines to give your AI agent a file database and long-term memory.</strong><br/>
+  <strong>3 lines to give your AI agent an AI-native database and long-term memory.</strong><br/>
   Read any file. Search any workspace. Remember everything.
 </p>
 

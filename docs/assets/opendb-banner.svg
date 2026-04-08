@@ -1,36 +1,23 @@
-<svg width="1200" height="300" viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
   <!-- Background -->
-  <rect width="1200" height="300" fill="#1A1A1A"/>
+  <rect width="1200" height="300" fill="#000"/>
 
-  <!-- Logo (left side) -->
-  <g transform="translate(60, 40) scale(1.8)">
-    <g transform="scale(1.05)" fill="none" stroke="white" stroke-linecap="round">
-      <path d="M10 62 C10 28, 30 8, 40 8 C50 8, 70 28, 70 62" stroke-width="3"/>
-      <path d="M22 62 C22 40, 32 22, 40 20 C48 22, 58 40, 58 62" stroke-width="4"/>
-      <line x1="40" y1="20" x2="40" y2="63" stroke-width="2"/>
-    </g>
+  <!-- Logo icon -->
+  <g transform="translate(80, 62)">
+    <svg width="176" height="176" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="17" fill="#111"/>
+      <path d="M18,18 L42,18 Q58,18 58,40 Q58,62 42,62 L18,62 L18,46 L42,46 Q48,46 48,40 Q48,34 42,34 L18,34 Z" fill="#fff"/>
+      <rect x="0" y="33" width="28" height="14" fill="#fff"/>
+    </svg>
   </g>
 
-  <!-- OpenDB Text -->
-  <g transform="translate(280, 150)">
-    <text x="0" y="0" font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="72" fill="white" font-weight="700">
-      Open<tspan fill="#888">DB</tspan>
-    </text>
-  </g>
-
-  <!-- Decorative line -->
-  <line x1="280" y1="165" x2="750" y2="165" stroke="#333" stroke-width="1"/>
+  <!-- "openDB" text -->
+  <text x="300" y="170" font-family="'DM Sans','Helvetica Neue',Arial,sans-serif" font-size="76" fill="#fff" font-weight="700" letter-spacing="-2.5">
+    open<tspan fill="#666">DB</tspan>
+  </text>
 
   <!-- Tagline -->
-  <g transform="translate(280, 195)">
-    <text x="0" y="0" font-family="'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#888" font-weight="400">
-      The file database built for AI agents
-    </text>
-  </g>
-
-  <!-- Version badge -->
-  <g transform="translate(280, 230)">
-    <rect x="0" y="0" width="52" height="22" rx="4" fill="#888" opacity="0.15"/>
-    <text x="26" y="15" font-family="'SF Mono', 'Fira Code', monospace" font-size="12" fill="#888" text-anchor="middle" font-weight="600">v1.3</text>
-  </g>
+  <text x="300" y="216" font-family="'DM Sans','Helvetica Neue',Arial,sans-serif" font-size="20" fill="#666" font-weight="400">
+    The AI-native database
+  </text>
 </svg>
