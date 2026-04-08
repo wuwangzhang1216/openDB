@@ -202,6 +202,56 @@ class Workspace:
         backend = get_backend()
         return await backend.get_workspace_stats()
 
+    # ------------------------------------------------------------------
+    # Agent Memory
+    # ------------------------------------------------------------------
+
+    async def memory_store(
+        self,
+        content: str,
+        memory_type: str = "semantic",
+        tags: list[str] | None = None,
+        metadata: dict | None = None,
+    ) -> dict:
+        """Store a memory entry."""
+        from musedb_core.services.memory_service import store_memory
+        return await store_memory(content, memory_type, tags, metadata)
+
+    async def memory_recall(
+        self,
+        query: str,
+        memory_type: str | None = None,
+        tags: list[str] | None = None,
+        limit: int = 10,
+    ) -> dict:
+        """Search and recall stored memories."""
+        from musedb_core.services.memory_service import recall_memories
+        return await recall_memories(query, memory_type, tags, limit)
+
+    async def memory_forget(
+        self,
+        memory_id: str | None = None,
+        query: str | None = None,
+        memory_type: str | None = None,
+    ) -> dict:
+        """Delete memories by ID or query."""
+        from musedb_core.services.memory_service import forget_memory
+        return await forget_memory(memory_id, query, memory_type)
+
+    async def memory_list(
+        self,
+        memory_type: str | None = None,
+        tags: list[str] | None = None,
+        limit: int = 20,
+    ) -> dict:
+        """List memories with optional filters."""
+        from musedb_core.services.memory_service import list_memories
+        return await list_memories(memory_type, tags, limit)
+
+    # ------------------------------------------------------------------
+    # Glob
+    # ------------------------------------------------------------------
+
     async def glob(self, pattern: str, path: str | Path | None = None) -> dict:
         """Find files matching a glob pattern."""
         import os

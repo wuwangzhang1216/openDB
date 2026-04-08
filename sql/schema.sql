@@ -71,3 +71,28 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER files_updated
     BEFORE UPDATE ON files
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ============================================================
+-- memories: agent memory entries
+-- ============================================================
+CREATE TABLE memories (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content         TEXT NOT NULL,
+    memory_type     TEXT NOT NULL DEFAULT 'semantic',
+                    -- 'episodic' | 'semantic' | 'procedural'
+    tags            TEXT[] DEFAULT '{}',
+    metadata        JSONB DEFAULT '{}',
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_memories_type ON memories(memory_type);
+CREATE INDEX idx_memories_created ON memories(created_at DESC);
+CREATE INDEX idx_memories_tags ON memories USING GIN(tags);
+CREATE INDEX idx_memories_tsv ON memories USING GIN(
+    to_tsvector('english', content)
+);
+
+CREATE TRIGGER memories_updated
+    BEFORE UPDATE ON memories
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();

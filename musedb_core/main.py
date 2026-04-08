@@ -13,6 +13,7 @@ from musedb_core.routers.health import router as health_router
 from musedb_core.routers.info import router as info_router
 from musedb_core.routers.index import router as index_router
 from musedb_core.routers.read import router as read_router
+from musedb_core.routers.memory import router as memory_router
 from musedb_core.routers.search import router as search_router
 from musedb_core.services.read_service import AmbiguousFilenameError
 from musedb_core.services.read_service import FileNotFoundError as FileDBNotFoundError
@@ -87,6 +88,7 @@ app.include_router(glob_router)
 app.include_router(index_router)
 app.include_router(read_router)
 app.include_router(search_router)
+app.include_router(memory_router)
 
 
 @app.get("/")

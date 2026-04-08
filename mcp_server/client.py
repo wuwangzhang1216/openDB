@@ -226,7 +226,115 @@ async def get_info() -> str:
         for r in recent:
             lines_out.append(f"  {r['filename']:<40} {r.get('updated_at', '?')}")
 
+    memory = data.get("memory")
+    if memory and memory.get("total", 0) > 0:
+        lines_out.append("")
+        lines_out.append(f"Memories: {memory['total']} total")
+        mem_types = memory.get("by_type", {})
+        if mem_types:
+            parts = [f"{t}: {c}" for t, c in sorted(mem_types.items())]
+            lines_out.append(f"  {', '.join(parts)}")
+
     return "\n".join(lines_out)
+
+
+# ------------------------------------------------------------------
+# Agent Memory
+# ------------------------------------------------------------------
+
+async def memory_store(
+    content: str,
+    memory_type: str = "semantic",
+    tags: list[str] | None = None,
+    metadata: dict | None = None,
+) -> str:
+    """Call POST /memory to store a memory."""
+    client = await get_client()
+    body: dict = {"content": content, "memory_type": memory_type}
+    if tags:
+        body["tags"] = tags
+    if metadata:
+        body["metadata"] = metadata
+
+    response = await client.post("/memory", json=body)
+    if response.status_code != 200:
+        return _handle_error(response)
+
+    data = response.json()
+    return (
+        f"Memory stored (id: {data.get('memory_id', '?')}, "
+        f"type: {data.get('memory_type', '?')})"
+    )
+
+
+async def memory_recall(
+    query: str,
+    memory_type: str | None = None,
+    tags: list[str] | None = None,
+    limit: int = 10,
+) -> str:
+    """Call POST /memory/recall to search memories."""
+    client = await get_client()
+    body: dict = {"query": query, "limit": limit}
+    if memory_type:
+        body["memory_type"] = memory_type
+    if tags:
+        body["tags"] = tags
+
+    response = await client.post("/memory/recall", json=body)
+    if response.status_code != 200:
+        return _handle_error(response)
+
+    data = response.json()
+    results = data.get("results", [])
+    total = data.get("total", 0)
+
+    if not results:
+        return f"No memories found for '{query}'"
+
+    lines_out: list[str] = [f"Found {total} memories:"]
+    lines_out.append("")
+    for r in results:
+        mtype = r.get("memory_type", "?")
+        score = r.get("score", 0)
+        created = r.get("created_at", "?")
+        tags_str = ", ".join(r.get("tags", []))
+        header = f"  [{mtype}] (score: {score}, created: {created})"
+        if tags_str:
+            header += f" tags: {tags_str}"
+        lines_out.append(header)
+        # Show highlight if available, otherwise truncate content
+        highlight = r.get("highlight") or r.get("content", "")[:150]
+        lines_out.append(f"    {highlight}")
+        lines_out.append(f"    id: {r.get('memory_id', '?')}")
+        lines_out.append("")
+
+    return "\n".join(lines_out)
+
+
+async def memory_forget(
+    memory_id: str | None = None,
+    query: str | None = None,
+    memory_type: str | None = None,
+) -> str:
+    """Call POST /memory/forget to delete memories."""
+    client = await get_client()
+    body: dict = {}
+    if memory_id:
+        body["memory_id"] = memory_id
+    if query:
+        body["query"] = query
+    if memory_type:
+        body["memory_type"] = memory_type
+
+    response = await client.post("/memory/forget", json=body)
+    if response.status_code != 200:
+        return _handle_error(response)
+
+    data = response.json()
+    deleted = data.get("deleted", 0)
+    by = data.get("by", "?")
+    return f"Deleted {deleted} memory/memories (by {by})"
 
 
 async def glob_files(pattern: str, path: str | None = None) -> str:

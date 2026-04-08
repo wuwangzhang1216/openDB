@@ -75,3 +75,60 @@ class InfoInput(BaseModel):
     """Input for workspace info (no parameters needed)."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+# ------------------------------------------------------------------
+# Agent Memory
+# ------------------------------------------------------------------
+
+class MemoryStoreInput(BaseModel):
+    """Input for storing a memory."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    content: str = Field(
+        ..., description="Memory content text", min_length=1, max_length=10000
+    )
+    memory_type: str = Field(
+        "semantic",
+        description="Type: 'episodic' (past events), 'semantic' (facts/knowledge), 'procedural' (workflows/rules)",
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="Tags for categorization"
+    )
+    metadata: dict = Field(
+        default_factory=dict, description="Additional key-value metadata"
+    )
+
+
+class MemoryRecallInput(BaseModel):
+    """Input for recalling memories."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    query: str = Field(
+        ..., description="Search query for memory recall", min_length=1
+    )
+    memory_type: str | None = Field(
+        None, description="Filter by type: episodic, semantic, procedural"
+    )
+    tags: list[str] | None = Field(
+        None, description="Filter by tags"
+    )
+    limit: int = Field(10, description="Max results", ge=1, le=50)
+
+
+class MemoryForgetInput(BaseModel):
+    """Input for deleting memories."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    memory_id: str | None = Field(
+        None, description="Specific memory ID to delete"
+    )
+    query: str | None = Field(
+        None, description="Delete memories matching this search query"
+    )
+    memory_type: str | None = Field(
+        None, description="Filter by type when deleting by query"
+    )

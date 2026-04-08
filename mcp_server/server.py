@@ -8,7 +8,10 @@ from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.client import close_client
-from mcp_server.models import GlobInput, InfoInput, ReadInput, SearchInput
+from mcp_server.models import (
+    GlobInput, InfoInput, MemoryForgetInput, MemoryRecallInput,
+    MemoryStoreInput, ReadInput, SearchInput,
+)
 from mcp_server import client as musedb
 
 # ---------------------------------------------------------------------------
@@ -234,3 +237,127 @@ async def musedb_info(params: InfoInput) -> str:
         - Get workspace overview: (no parameters needed)
     """
     return await musedb.get_info()
+
+
+# ---------------------------------------------------------------------------
+# Agent Memory Tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool(
+    name="musedb_memory_store",
+    annotations={
+        "title": "Store Memory",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": False,
+    },
+)
+async def musedb_memory_store(params: MemoryStoreInput) -> str:
+    """Store a memory for later recall. Memories persist across sessions.
+
+    Use this to save facts, user preferences, task outcomes, or learned workflows
+    so they can be recalled later with musedb_memory_recall.
+
+    Memory types:
+    - semantic: Facts, knowledge, user preferences (default)
+    - episodic: Past events, interaction outcomes, task results
+    - procedural: Learned workflows, rules, patterns
+
+    Args:
+        params (MemoryStoreInput): Validated input parameters containing:
+            - content (str): Memory text to store
+            - memory_type (str): 'semantic', 'episodic', or 'procedural'
+            - tags (list[str]): Tags for categorization
+            - metadata (dict): Additional key-value metadata
+
+    Returns:
+        str: Confirmation with memory ID and type.
+
+    Examples:
+        - Store a fact: content="User prefers dark mode", memory_type="semantic"
+        - Store an event: content="Deployed v2.1 to production on 2025-03-15", memory_type="episodic"
+        - Store a workflow: content="Always run tests before deploying", memory_type="procedural"
+    """
+    return await musedb.memory_store(
+        content=params.content,
+        memory_type=params.memory_type,
+        tags=params.tags,
+        metadata=params.metadata,
+    )
+
+
+@mcp.tool(
+    name="musedb_memory_recall",
+    annotations={
+        "title": "Recall Memories",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def musedb_memory_recall(params: MemoryRecallInput) -> str:
+    """Search and recall stored memories using full-text search.
+
+    Results are ranked by a combination of relevance and recency — recent memories
+    score higher than older ones with the same keyword match.
+
+    Args:
+        params (MemoryRecallInput): Validated input parameters containing:
+            - query (str): Search query for memory recall
+            - memory_type (str, optional): Filter by type: episodic, semantic, procedural
+            - tags (list[str], optional): Filter by tags
+            - limit (int): Max results (default: 10)
+
+    Returns:
+        str: Formatted list of matching memories with scores, types, and timestamps.
+
+    Examples:
+        - Recall user preferences: query="user preferences"
+        - Recall deployments: query="deploy production", memory_type="episodic"
+        - Recall by tag: query="auth", tags=["security"]
+    """
+    return await musedb.memory_recall(
+        query=params.query,
+        memory_type=params.memory_type,
+        tags=params.tags,
+        limit=params.limit,
+    )
+
+
+@mcp.tool(
+    name="musedb_memory_forget",
+    annotations={
+        "title": "Forget Memory",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def musedb_memory_forget(params: MemoryForgetInput) -> str:
+    """Delete memories by ID or by search query.
+
+    Use memory_id to delete a specific memory, or query to find and delete
+    all matching memories. At least one of memory_id or query must be provided.
+
+    Args:
+        params (MemoryForgetInput): Validated input parameters containing:
+            - memory_id (str, optional): Specific memory ID to delete
+            - query (str, optional): Delete memories matching this search query
+            - memory_type (str, optional): Filter by type when deleting by query
+
+    Returns:
+        str: Confirmation with count of deleted memories.
+
+    Examples:
+        - Delete by ID: memory_id="abc-123-def"
+        - Delete by query: query="outdated preferences"
+        - Delete by type+query: query="old deploy", memory_type="episodic"
+    """
+    return await musedb.memory_forget(
+        memory_id=params.memory_id,
+        query=params.query,
+        memory_type=params.memory_type,
+    )

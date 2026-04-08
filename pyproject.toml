@@ -1,7 +1,7 @@
 [project]
 name = "musedb"
-version = "1.0.0"
-description = "The AI-native file database. Built from the ground up for LLM agents to read and search any document format as plain text."
+version = "1.1.0"
+description = "The AI-native file database and memory store. Built for LLM agents to read, search, and remember."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "AGPL-3.0-or-later"}

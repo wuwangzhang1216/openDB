@@ -159,3 +159,52 @@ class StorageBackend(Protocol):
         Returns None if the file does not exist.
         """
         ...
+
+    # ------------------------------------------------------------------
+    # Agent Memory
+    # ------------------------------------------------------------------
+
+    async def store_memory(
+        self,
+        *,
+        memory_id: str,
+        content: str,
+        memory_type: str,
+        tags: list[str],
+        metadata: dict,
+    ) -> dict:
+        """Store a memory entry. Returns the memory record dict."""
+        ...
+
+    async def recall_memories(
+        self,
+        query: str,
+        memory_type: str | None,
+        tags: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> dict:
+        """FTS search on memories with time-decay scoring.
+
+        Returns {total, results[...]} where each result includes a ``score``
+        field that combines FTS relevance with recency decay.
+        """
+        ...
+
+    async def get_memory(self, memory_id: str) -> dict | None:
+        """Return a single memory record by UUID, or None."""
+        ...
+
+    async def delete_memory(self, memory_id: str) -> bool:
+        """Delete a memory by UUID. Returns True if deleted, False if not found."""
+        ...
+
+    async def list_memories(
+        self,
+        memory_type: str | None,
+        tags: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> dict:
+        """List memories with optional filters. Returns {total, memories[...]}."""
+        ...

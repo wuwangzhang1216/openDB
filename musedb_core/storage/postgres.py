@@ -589,10 +589,192 @@ class PostgresBackend:
                 for r in recent_rows
             ]
 
+        # Memory stats
+        async with pool.acquire() as conn:
+            mem_rows = await conn.fetch(
+                "SELECT memory_type, COUNT(*) AS cnt FROM memories GROUP BY memory_type"
+            )
+        memory_by_type = {r["memory_type"]: r["cnt"] for r in mem_rows}
+        memory_total = sum(memory_by_type.values())
+
         return {
             "by_status": by_status,
             "by_type": by_type,
             "recent": recent,
+            "memory": {
+                "total": memory_total,
+                "by_type": memory_by_type,
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # Agent Memory
+    # ------------------------------------------------------------------
+
+    async def store_memory(
+        self,
+        *,
+        memory_id: str,
+        content: str,
+        memory_type: str,
+        tags: list[str],
+        metadata: dict,
+    ) -> dict:
+        import uuid as _uuid
+        from musedb_core.database import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO memories (id, content, memory_type, tags, metadata)
+                VALUES ($1, $2, $3, $4, $5::jsonb)
+                RETURNING id, content, memory_type, tags, metadata, created_at, updated_at
+                """,
+                _uuid.UUID(memory_id),
+                content,
+                memory_type,
+                tags,
+                json.dumps(metadata),
+            )
+        return _pg_memory_row(row)
+
+    async def recall_memories(
+        self,
+        query: str,
+        memory_type: str | None,
+        tags: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> dict:
+        from musedb_core.database import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            conditions = [
+                "to_tsvector('english', m.content) @@ plainto_tsquery('english', $1)"
+            ]
+            params: list = [query]
+            idx = 1
+
+            if memory_type:
+                idx += 1
+                conditions.append(f"m.memory_type = ${idx}")
+                params.append(memory_type)
+            if tags:
+                idx += 1
+                conditions.append(f"m.tags @> ${idx}::text[]")
+                params.append(tags)
+
+            where_clause = " AND ".join(conditions)
+            n = len(params)
+
+            search_sql = f"""
+                SELECT m.id, m.content, m.memory_type, m.tags, m.metadata,
+                       m.created_at, m.updated_at,
+                       ts_rank_cd(to_tsvector('english', m.content),
+                                  plainto_tsquery('english', $1)) AS fts_score,
+                       (ts_rank_cd(to_tsvector('english', m.content),
+                                   plainto_tsquery('english', $1))
+                        * power(0.5, EXTRACT(EPOCH FROM (now() - m.created_at))
+                                     / 86400.0 / 30.0)) AS score,
+                       ts_headline('english', m.content,
+                                   plainto_tsquery('english', $1),
+                                   'MaxWords=30, MinWords=10') AS highlight
+                FROM memories m
+                WHERE {where_clause}
+                ORDER BY score DESC
+                LIMIT ${n + 1} OFFSET ${n + 2}
+            """
+            count_sql = f"""
+                SELECT COUNT(*) FROM memories m WHERE {where_clause}
+            """
+
+            rows = await conn.fetch(search_sql, *params, limit, offset)
+            total = await conn.fetchval(count_sql, *params)
+
+        results = []
+        for r in rows:
+            results.append({
+                "memory_id": str(r["id"]),
+                "content": r["content"],
+                "memory_type": r["memory_type"],
+                "tags": r["tags"],
+                "metadata": json.loads(r["metadata"]) if r["metadata"] else {},
+                "highlight": r["highlight"] or "",
+                "score": round(float(r["score"]), 4) if r["score"] else 0.0,
+                "created_at": r["created_at"].isoformat() + "Z" if r["created_at"] else None,
+                "updated_at": r["updated_at"].isoformat() + "Z" if r["updated_at"] else None,
+            })
+        return {"total": total or 0, "results": results}
+
+    async def get_memory(self, memory_id: str) -> dict | None:
+        import uuid as _uuid
+        from musedb_core.database import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT id, content, memory_type, tags, metadata, "
+                "created_at, updated_at FROM memories WHERE id = $1",
+                _uuid.UUID(memory_id),
+            )
+        return _pg_memory_row(row) if row else None
+
+    async def delete_memory(self, memory_id: str) -> bool:
+        import uuid as _uuid
+        from musedb_core.database import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.execute(
+                "DELETE FROM memories WHERE id = $1", _uuid.UUID(memory_id)
+            )
+        return result == "DELETE 1"
+
+    async def list_memories(
+        self,
+        memory_type: str | None,
+        tags: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> dict:
+        from musedb_core.database import get_pool
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            conditions: list[str] = []
+            params: list = []
+            idx = 0
+
+            if memory_type:
+                idx += 1
+                conditions.append(f"memory_type = ${idx}")
+                params.append(memory_type)
+            if tags:
+                idx += 1
+                conditions.append(f"tags @> ${idx}::text[]")
+                params.append(tags)
+
+            where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+            n = len(params)
+
+            query = f"""
+                SELECT id, content, memory_type, tags, metadata,
+                       created_at, updated_at
+                FROM memories
+                {where_clause}
+                ORDER BY created_at DESC
+                LIMIT ${n + 1} OFFSET ${n + 2}
+            """
+            count_query = f"SELECT COUNT(*) FROM memories {where_clause}"
+
+            rows = await conn.fetch(query, *params, limit, offset)
+            total = await conn.fetchval(count_query, *params)
+
+        return {
+            "total": total or 0,
+            "memories": [_pg_memory_row(r) for r in rows],
         }
 
 
@@ -616,6 +798,18 @@ def _add_pg_filters(conditions: list[str], params: list, filters: dict) -> None:
     if filters.get("created_after"):
         params.append(filters["created_after"])
         conditions.append(f"f.created_at >= ${len(params)}::timestamptz")
+
+
+def _pg_memory_row(row) -> dict:
+    return {
+        "memory_id": str(row["id"]),
+        "content": row["content"],
+        "memory_type": row["memory_type"],
+        "tags": row["tags"],
+        "metadata": json.loads(row["metadata"]) if row["metadata"] else {},
+        "created_at": row["created_at"].isoformat() + "Z" if row["created_at"] else None,
+        "updated_at": row["updated_at"].isoformat() + "Z" if row["updated_at"] else None,
+    }
 
 
 def _pg_file_row(row) -> dict:

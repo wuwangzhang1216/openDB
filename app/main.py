@@ -12,6 +12,7 @@ from app.routers.glob import router as glob_router
 from app.routers.health import router as health_router
 from app.routers.index import router as index_router
 from app.routers.read import router as read_router
+from app.routers.memory import router as memory_router
 from app.routers.search import router as search_router
 from app.services.read_service import AmbiguousFilenameError
 from app.services.read_service import FileNotFoundError as FileDBNotFoundError
@@ -85,6 +86,7 @@ app.include_router(glob_router)
 app.include_router(index_router)
 app.include_router(read_router)
 app.include_router(search_router)
+app.include_router(memory_router)
 
 
 @app.get("/")

@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>The file database built for AI agents.</strong><br/>
-  Parse once, query forever. <code>cat</code> + <code>grep</code> for any file format.
+  <strong>The file database and memory store built for AI agents.</strong><br/>
+  Parse once, query forever. <code>cat</code> + <code>grep</code> for any file format. <code>store</code> + <code>recall</code> for agent memory.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 ---
 
-MuseDB turns any file — code, PDF, DOCX, PPTX, XLSX, CSV, images — into instantly searchable plain text. 4 MCP tools give LLM agents full read/search access without writing parsing scripts.
+MuseDB turns any file — code, PDF, DOCX, PPTX, XLSX, CSV, images — into instantly searchable plain text, and gives agents persistent long-term memory with full-text search. 7 MCP tools provide file access, workspace search, and memory store/recall — no parsing scripts, no vector database.
 
 ## Why MuseDB?
 
@@ -75,7 +75,7 @@ mcp:
     args: ["serve-mcp", "--workspace", "/path/to/workspace"]
 ```
 
-That's it. Your agent now has `musedb_read`, `musedb_search`, `musedb_glob`, and `musedb_info`.
+That's it. Your agent now has 7 tools: `musedb_read`, `musedb_search`, `musedb_glob`, `musedb_info`, `musedb_memory_store`, `musedb_memory_recall`, and `musedb_memory_forget`.
 
 ## MCP Tools
 
@@ -123,6 +123,67 @@ musedb_glob(pattern="**/*.py", path="/workspace")
 musedb_glob(pattern="src/**/*.{ts,tsx}", path="/workspace")
 ```
 
+## Agent Memory
+
+MuseDB doubles as a **long-term memory store** for AI agents. Memories are lightweight text entries indexed with the same FTS infrastructure as workspace files — but stored separately so they never pollute file search results.
+
+### Why not Markdown files?
+
+Most agent memory systems (Claude Code, Cursor, etc.) store memories as Markdown files with linear scan retrieval. This works for 50 notes — it breaks at scale:
+
+| | Markdown files | MuseDB Memory |
+|---|---|---|
+| **Search** | Full-file scan, substring match | FTS5 BM25 index, O(log n) |
+| **Ranking** | None — all matches are equal | Relevance × recency decay |
+| **Capacity** | Claude Code: 200-line hard limit | No hard limit, indexed |
+| **CJK** | Broken (no word segmentation) | jieba tokenization, native CJK |
+| **Staleness** | Old = new, manual cleanup | `0.5^(age/30)` auto-decay |
+| **Structure** | Free text + frontmatter | tags[], metadata{}, memory_type |
+| **Agent cost** | Tokens spent on file management | 3 API calls: store/recall/forget |
+
+### Why not vector databases?
+
+MuseDB's FTS benchmark shows keyword search **improves with scale** while vector/RAG degrades (4.6/5 vs 3.5/5 at 325 docs). The same applies to memory: vector similarity retrieves topically-similar noise, while FTS retrieves exactly what the agent asked for.
+
+### `musedb_memory_store` — Store a memory
+
+```
+musedb_memory_store(content="User prefers dark mode and compact layout", memory_type="semantic")
+musedb_memory_store(content="Deployed v2.1 to prod on 2025-03-15, rollback required", memory_type="episodic", tags=["deploy"])
+musedb_memory_store(content="Always run integration tests before merging to main", memory_type="procedural")
+```
+
+Three memory types:
+- **semantic** — Facts, preferences, domain knowledge (default)
+- **episodic** — Past events, task outcomes, interaction history
+- **procedural** — Learned workflows, rules, best practices
+
+### `musedb_memory_recall` — Search memories
+
+Results ranked by **relevance × recency** — recent memories score higher than older ones with the same keyword match.
+
+```
+musedb_memory_recall(query="user preferences")
+→ Found 3 memories:
+    [semantic] (score: 0.8234, created: 2025-03-20T10:00:00Z)
+      User prefers dark mode and compact layout
+    [semantic] (score: 0.3112, created: 2025-01-05T08:00:00Z)
+      User prefers verbose error messages
+```
+
+Filter by type or tags:
+```
+musedb_memory_recall(query="deploy", memory_type="episodic")
+musedb_memory_recall(query="testing", tags=["ci"])
+```
+
+### `musedb_memory_forget` — Delete memories
+
+```
+musedb_memory_forget(memory_id="abc-123-def")        # Delete by ID
+musedb_memory_forget(query="outdated preferences")   # Delete by search
+```
+
 ## Python Library
 
 ```bash
@@ -136,9 +197,15 @@ db = MuseDB.open("./my_workspace")
 await db.init()
 await db.index()
 
+# Workspace
 stats   = await db.info()                                # workspace overview
 text    = await db.read("report.pdf", pages="1-3")       # read any file
 results = await db.search("quarterly revenue")            # full-text search
+
+# Memory
+await db.memory_store("User prefers concise answers", memory_type="semantic")
+memories = await db.memory_recall("user preferences")    # FTS + time-decay
+await db.memory_forget(memory_id="abc-123")              # delete by ID
 
 await db.close()
 ```
@@ -161,6 +228,10 @@ MuseDB also exposes a full HTTP API. Run with `musedb serve` (embedded) or `dock
 | `/files/{id}` | `GET`/`DELETE` | File details / delete |
 | `/watch` | `GET` | List active watchers |
 | `/watch/{id}` | `GET`/`DELETE` | Watcher details / stop |
+| `/memory` | `POST` | Store a memory (`{"content", "memory_type", "tags", "metadata"}`) |
+| `/memory` | `GET` | List memories (`?memory_type=`, `?tags=`, `?limit=`, `?offset=`) |
+| `/memory/recall` | `POST` | Search memories with time-decay ranking (`{"query", "memory_type", "tags"}`) |
+| `/memory/forget` | `POST` | Delete memories (`{"memory_id"}` or `{"query", "memory_type"}`) |
 | `/health` | `GET` | Health check |
 
 ## Supported Formats
@@ -179,9 +250,10 @@ MuseDB also exposes a full HTTP API. Run with `musedb serve` (embedded) or `dock
 ## Key Features
 
 - **Dual-mode** — Embedded (SQLite, zero-config) or Server (PostgreSQL, shared access); same API
-- **4 MCP tools** — `read`, `search`, `glob`, `info` — replace an agent's built-in file tools
+- **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for agent memory
+- **Agent memory** — Persistent long-term memory with FTS + time-decay ranking; no vector DB needed
 - **Real-time sync** — Directories are watched via OS-native events after indexing
-- **Full-text search** — FTS5 (SQLite) / tsvector (PostgreSQL) + CJK substring fallback
+- **Full-text search** — FTS5 (SQLite) / tsvector (PostgreSQL) with jieba CJK tokenization
 - **Structured output** — Spreadsheets as `{sheets: [{columns, rows}]}` for direct analysis
 - **Fuzzy filename resolution** — Find files by exact name, partial match, path, or UUID
 - **Duplicate detection** — SHA-256 deduplication across uploads and directory scans
