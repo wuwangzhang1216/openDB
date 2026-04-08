@@ -1,4 +1,4 @@
-# MuseDB Architecture
+# OpenDB Architecture
 
 ## System Overview
 
@@ -78,7 +78,7 @@ Recall query
 ## Directory Structure
 
 ```
-musedb_core/           Core library (backend-agnostic)
+opendb_core/           Core library (backend-agnostic)
   config.py            Pydantic settings
   database.py          asyncpg pool manager
   workspace.py         High-level Workspace API (embedded mode)
@@ -111,7 +111,7 @@ musedb_core/           Core library (backend-agnostic)
 app/                   FastAPI server entry point
   main.py              Lifespan, middleware, router registration
   config.py            Server-specific settings
-  database.py          Connection pool (mirrors musedb_core)
+  database.py          Connection pool (mirrors opendb_core)
   routers/, services/, storage/   Server-specific wrappers
 
 mcp_server/            MCP stdio server
@@ -119,16 +119,16 @@ mcp_server/            MCP stdio server
   client.py            Calls Workspace or backend methods
   models.py            Pydantic input schemas
 
-musedb/                Public CLI + Python API
+opendb/                Public CLI + Python API
   cli.py               init, index, search, read, serve-mcp, serve
-  __init__.py           Re-exports Workspace as MuseDB
+  __init__.py           Re-exports Workspace as OpenDB
 ```
 
 ## Storage Backends
 
 ### SQLite (Embedded)
 
-- Zero-config: creates `.musedb/metadata.db` in workspace
+- Zero-config: creates `.opendb/metadata.db` in workspace
 - FTS5 virtual tables (standalone, jieba-tokenized at ingestion)
 - WAL mode for concurrent reads
 - Best for: local agents, single-user, CJK-heavy workloads

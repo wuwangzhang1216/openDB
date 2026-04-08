@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      FILEDB_DATABASE_URL: postgresql://musedb:musedb@postgres:5432/musedb
+      FILEDB_DATABASE_URL: postgresql://opendb:opendb@postgres:5432/opendb
       FILEDB_FILE_STORAGE_PATH: /data
     volumes:
       - filedata:/data
@@ -16,14 +16,14 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: musedb
-      POSTGRES_PASSWORD: musedb
-      POSTGRES_DB: musedb
+      POSTGRES_USER: opendb
+      POSTGRES_PASSWORD: opendb
+      POSTGRES_DB: opendb
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U musedb"]
+      test: ["CMD-SHELL", "pg_isready -U opendb"]
       interval: 5s
       timeout: 5s
       retries: 5

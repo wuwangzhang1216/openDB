@@ -1,12 +1,12 @@
-"""Workspace model — represents a local MuseDB embedded workspace.
+"""Workspace model — represents a local OpenDB embedded workspace.
 
-A workspace is a root directory with a ``.musedb/`` subdirectory that holds
+A workspace is a root directory with a ``.opendb/`` subdirectory that holds
 all metadata, indexes, and configuration for embedded mode.
 
 Layout::
 
     <root>/
-      .musedb/
+      .opendb/
         config.json    # workspace settings (backend type, OCR config, etc.)
         metadata.db    # SQLite database (embedded mode)
         blobs/         # cached copies of indexed files
@@ -56,7 +56,7 @@ class WorkspaceConfig:
 
 
 class Workspace:
-    """A local embedded MuseDB workspace backed by SQLite.
+    """A local embedded OpenDB workspace backed by SQLite.
 
     Usage::
 
@@ -69,7 +69,7 @@ class Workspace:
 
     def __init__(self, root: Path, config: WorkspaceConfig | None = None) -> None:
         self.root = root.resolve()
-        self.musedb_dir = self.root / ".musedb"
+        self.opendb_dir = self.root / ".opendb"
         self.config = config or WorkspaceConfig()
         self._backend = None
 
@@ -81,11 +81,11 @@ class Workspace:
     def open(cls, path: str | Path) -> "Workspace":
         """Open (or create) a workspace at *path*.
 
-        Loads existing config from ``.musedb/config.json`` if present.
+        Loads existing config from ``.opendb/config.json`` if present.
         Does NOT call ``init()`` — call that separately (it is async).
         """
         root = Path(path).resolve()
-        config_path = root / ".musedb" / _CONFIG_FILE
+        config_path = root / ".opendb" / _CONFIG_FILE
         config = WorkspaceConfig()
         if config_path.exists():
             try:
@@ -99,24 +99,24 @@ class Workspace:
     # ------------------------------------------------------------------
 
     async def init(self) -> None:
-        """Create the ``.musedb/`` directory layout and open the SQLite backend."""
-        self.musedb_dir.mkdir(parents=True, exist_ok=True)
-        (self.musedb_dir / "blobs").mkdir(exist_ok=True)
-        (self.musedb_dir / "extracted").mkdir(exist_ok=True)
+        """Create the ``.opendb/`` directory layout and open the SQLite backend."""
+        self.opendb_dir.mkdir(parents=True, exist_ok=True)
+        (self.opendb_dir / "blobs").mkdir(exist_ok=True)
+        (self.opendb_dir / "extracted").mkdir(exist_ok=True)
 
         # Write config
-        config_path = self.musedb_dir / _CONFIG_FILE
+        config_path = self.opendb_dir / _CONFIG_FILE
         config_path.write_text(json.dumps(self.config.to_dict(), indent=2))
 
         # Initialise and register the SQLite backend globally so all services use it
         from app.storage import init_backend
         from app.config import settings
 
-        db_path = self.musedb_dir / _DB_FILE
+        db_path = self.opendb_dir / _DB_FILE
         await init_backend("sqlite", db_path=db_path)
 
         # Patch settings to match workspace config
-        settings.file_storage_path = self.musedb_dir / "blobs"
+        settings.file_storage_path = self.opendb_dir / "blobs"
         settings.ocr_enabled = self.config.ocr_enabled
         settings.ocr_languages = self.config.ocr_languages
         settings.max_file_size = self.config.max_file_size_mb * 1024 * 1024
@@ -140,7 +140,7 @@ class Workspace:
         await close_backend()
 
     # ------------------------------------------------------------------
-    # High-level API (mirrors MuseDBClient interface)
+    # High-level API (mirrors OpenDBClient interface)
     # ------------------------------------------------------------------
 
     async def index(self, path: str | Path | None = None) -> dict:

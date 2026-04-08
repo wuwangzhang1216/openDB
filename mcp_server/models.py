@@ -1,4 +1,4 @@
-"""Pydantic input models for MuseDB MCP tools."""
+"""Pydantic input models for OpenDB MCP tools."""
 
 from __future__ import annotations
 

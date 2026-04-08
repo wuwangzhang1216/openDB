@@ -41,7 +41,7 @@ def sample_dir(tmp_path):
 @pytest.fixture
 async def workspace(tmp_path):
     """Create a temporary workspace using the Workspace class."""
-    from musedb_core.workspace import Workspace
+    from opendb_core.workspace import Workspace
 
     ws = Workspace(root=tmp_path)
     await ws.init()
@@ -125,40 +125,40 @@ class TestE2EPipeline:
 
 class TestSharedHelpers:
     def test_build_highlight(self):
-        from musedb_core.storage.shared import build_highlight
+        from opendb_core.storage.shared import build_highlight
 
         text = "The quick brown fox jumps over the lazy dog near the river"
         hl = build_highlight(text, "fox")
         assert "fox" in hl
 
     def test_build_highlight_no_match(self):
-        from musedb_core.storage.shared import build_highlight
+        from opendb_core.storage.shared import build_highlight
 
         text = "Hello world"
         hl = build_highlight(text, "nonexistent")
         assert hl == text[:150]
 
     def test_escape_fts5_basic(self):
-        from musedb_core.storage.shared import escape_fts5
+        from opendb_core.storage.shared import escape_fts5
 
         result = escape_fts5("hello world")
         assert '"hello"' in result
         assert '"world"' in result
 
     def test_escape_fts5_or_mode(self):
-        from musedb_core.storage.shared import escape_fts5
+        from opendb_core.storage.shared import escape_fts5
 
         result = escape_fts5("running quickly", use_or=True)
         assert "OR" in result
 
     def test_tokenize_for_fts_latin(self):
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("hello world")
         assert result == "hello world"
 
     def test_tokenize_for_fts_cjk(self):
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("今天天气很好")
         # Should be segmented with spaces
@@ -166,7 +166,7 @@ class TestSharedHelpers:
         assert "天气" in result
 
     def test_tokenize_for_fts_hyphen(self):
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("gardening-related tips")
         assert "gardening" in result

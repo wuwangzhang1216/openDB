@@ -1,4 +1,4 @@
-"""MuseDB MCP Server — 3 tools: read, search, glob."""
+"""OpenDB MCP Server — 3 tools: read, search, glob."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from mcp_server.models import (
     GlobInput, InfoInput, MemoryForgetInput, MemoryRecallInput,
     MemoryStoreInput, ReadInput, SearchInput,
 )
-from mcp_server import client as musedb
+from mcp_server import client as opendb
 
 # ---------------------------------------------------------------------------
 # Code file extensions — these get line-numbered output automatically
@@ -59,11 +59,11 @@ async def app_lifespan():
 # ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
-mcp = FastMCP("musedb_mcp", lifespan=app_lifespan)
+mcp = FastMCP("opendb_mcp", lifespan=app_lifespan)
 
 
 @mcp.tool(
-    name="musedb_read",
+    name="opendb_read",
     annotations={
         "title": "Read File",
         "readOnlyHint": True,
@@ -72,14 +72,14 @@ mcp = FastMCP("musedb_mcp", lifespan=app_lifespan)
         "openWorldHint": False,
     },
 )
-async def musedb_read(params: ReadInput) -> str:
+async def opendb_read(params: ReadInput) -> str:
     """Read any file — code with line numbers, documents as plain text, spreadsheets as structured JSON.
 
     Supports page/line filtering, in-file grep, and OCR for scanned images.
     Use this for all file reading: source code, PDFs, Word docs, Excel sheets, images.
 
-    Workflow: Use musedb_glob first to discover files, then musedb_read to examine them.
-    If filename is ambiguous, use the full path from musedb_glob results.
+    Workflow: Use opendb_glob first to discover files, then opendb_read to examine them.
+    If filename is ambiguous, use the full path from opendb_glob results.
 
     Args:
         params (ReadInput): Validated input parameters containing:
@@ -116,7 +116,7 @@ async def musedb_read(params: ReadInput) -> str:
         else:
             lines_param = f"{start}-"
 
-    return await musedb.read_file(
+    return await opendb.read_file(
         filename=params.filename,
         numbered=is_code,
         pages=params.pages,
@@ -127,7 +127,7 @@ async def musedb_read(params: ReadInput) -> str:
 
 
 @mcp.tool(
-    name="musedb_search",
+    name="opendb_search",
     annotations={
         "title": "Search Files",
         "readOnlyHint": True,
@@ -136,7 +136,7 @@ async def musedb_read(params: ReadInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_search(params: SearchInput) -> str:
+async def opendb_search(params: SearchInput) -> str:
     """Search across code files (regex) and documents (full-text).
 
     Two modes:
@@ -144,8 +144,8 @@ async def musedb_search(params: SearchInput) -> str:
     - fts: Full-text keyword search on indexed documents (PDFs, Word, etc.). Use for natural language queries.
     Auto-detects mode: path/glob present → grep, otherwise → fts.
 
-    When to use this vs musedb_read with grep: Use musedb_search to find WHICH files contain something.
-    Use musedb_read with grep param to search WITHIN a specific file you already know about.
+    When to use this vs opendb_read with grep: Use opendb_search to find WHICH files contain something.
+    Use opendb_read with grep param to search WITHIN a specific file you already know about.
 
     Args:
         params (SearchInput): Validated input parameters containing:
@@ -167,7 +167,7 @@ async def musedb_search(params: SearchInput) -> str:
         - Case insensitive grep: query="TODO", path="/workspace", case_insensitive=True
         - With context: query="import", path="/src", glob="*.ts", context=2
     """
-    return await musedb.search(
+    return await opendb.search(
         query=params.query,
         mode=params.mode,
         path=params.path,
@@ -180,7 +180,7 @@ async def musedb_search(params: SearchInput) -> str:
 
 
 @mcp.tool(
-    name="musedb_glob",
+    name="opendb_glob",
     annotations={
         "title": "Find Files",
         "readOnlyHint": True,
@@ -189,11 +189,11 @@ async def musedb_search(params: SearchInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_glob(params: GlobInput) -> str:
+async def opendb_glob(params: GlobInput) -> str:
     """Find files matching a glob pattern, sorted by modification time (newest first).
 
-    Use this as the first step to discover files in a workspace before reading them with musedb_read.
-    Typical workflow: musedb_glob to find files → musedb_read to examine contents → musedb_search to find specific content.
+    Use this as the first step to discover files in a workspace before reading them with opendb_read.
+    Typical workflow: opendb_glob to find files → opendb_read to examine contents → opendb_search to find specific content.
 
     Args:
         params (GlobInput): Validated input parameters containing:
@@ -208,14 +208,14 @@ async def musedb_glob(params: GlobInput) -> str:
         - Find TypeScript in src: pattern="src/**/*.ts", path="/workspace"
         - Find config files: pattern="**/*.{json,yaml,toml}", path="/workspace"
     """
-    return await musedb.glob_files(
+    return await opendb.glob_files(
         pattern=params.pattern,
         path=params.path,
     )
 
 
 @mcp.tool(
-    name="musedb_info",
+    name="opendb_info",
     annotations={
         "title": "Workspace Info",
         "readOnlyHint": True,
@@ -224,7 +224,7 @@ async def musedb_glob(params: GlobInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_info(params: InfoInput) -> str:
+async def opendb_info(params: InfoInput) -> str:
     """Get workspace overview: file counts by status and type, recently updated files.
 
     Use this as the first step when entering a new workspace to understand what's available
@@ -236,7 +236,7 @@ async def musedb_info(params: InfoInput) -> str:
     Examples:
         - Get workspace overview: (no parameters needed)
     """
-    return await musedb.get_info()
+    return await opendb.get_info()
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ async def musedb_info(params: InfoInput) -> str:
 # ---------------------------------------------------------------------------
 
 @mcp.tool(
-    name="musedb_memory_store",
+    name="opendb_memory_store",
     annotations={
         "title": "Store Memory",
         "readOnlyHint": False,
@@ -253,11 +253,11 @@ async def musedb_info(params: InfoInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_memory_store(params: MemoryStoreInput) -> str:
+async def opendb_memory_store(params: MemoryStoreInput) -> str:
     """Store a memory for later recall. Memories persist across sessions.
 
     Use this to save facts, user preferences, task outcomes, or learned workflows
-    so they can be recalled later with musedb_memory_recall.
+    so they can be recalled later with opendb_memory_recall.
 
     Memory types:
     - semantic: Facts, knowledge, user preferences (default)
@@ -284,7 +284,7 @@ async def musedb_memory_store(params: MemoryStoreInput) -> str:
         - Pin a critical fact: content="User is a senior backend engineer", pinned=true
         - Store an event: content="Deployed v2.1 to production on 2025-03-15", memory_type="episodic"
     """
-    return await musedb.memory_store(
+    return await opendb.memory_store(
         content=params.content,
         memory_type=params.memory_type,
         tags=params.tags,
@@ -294,7 +294,7 @@ async def musedb_memory_store(params: MemoryStoreInput) -> str:
 
 
 @mcp.tool(
-    name="musedb_memory_recall",
+    name="opendb_memory_recall",
     annotations={
         "title": "Recall Memories",
         "readOnlyHint": True,
@@ -303,7 +303,7 @@ async def musedb_memory_store(params: MemoryStoreInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_memory_recall(params: MemoryRecallInput) -> str:
+async def opendb_memory_recall(params: MemoryRecallInput) -> str:
     """Search and recall stored memories using full-text search.
 
     Results are ranked by a combination of relevance and recency — recent memories
@@ -324,7 +324,7 @@ async def musedb_memory_recall(params: MemoryRecallInput) -> str:
         - Recall deployments: query="deploy production", memory_type="episodic"
         - Recall by tag: query="auth", tags=["security"]
     """
-    return await musedb.memory_recall(
+    return await opendb.memory_recall(
         query=params.query,
         memory_type=params.memory_type,
         tags=params.tags,
@@ -334,7 +334,7 @@ async def musedb_memory_recall(params: MemoryRecallInput) -> str:
 
 
 @mcp.tool(
-    name="musedb_memory_forget",
+    name="opendb_memory_forget",
     annotations={
         "title": "Forget Memory",
         "readOnlyHint": False,
@@ -343,7 +343,7 @@ async def musedb_memory_recall(params: MemoryRecallInput) -> str:
         "openWorldHint": False,
     },
 )
-async def musedb_memory_forget(params: MemoryForgetInput) -> str:
+async def opendb_memory_forget(params: MemoryForgetInput) -> str:
     """Delete memories by ID or by search query.
 
     Use memory_id to delete a specific memory, or query to find and delete
@@ -363,7 +363,7 @@ async def musedb_memory_forget(params: MemoryForgetInput) -> str:
         - Delete by query: query="outdated preferences"
         - Delete by type+query: query="old deploy", memory_type="episodic"
     """
-    return await musedb.memory_forget(
+    return await opendb.memory_forget(
         memory_id=params.memory_id,
         query=params.query,
         memory_type=params.memory_type,

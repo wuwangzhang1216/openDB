@@ -9,13 +9,13 @@ for SCALE in small medium large; do
     WS="benchmark/benchmark_workspace_${SCALE}"
     
     # Init + index if needed
-    if [ ! -d "$WS/.musedb" ]; then
-        python -c "from musedb.cli import app; import sys; sys.argv=['musedb','init','$WS']; app()"
+    if [ ! -d "$WS/.opendb" ]; then
+        python -c "from opendb.cli import app; import sys; sys.argv=['opendb','init','$WS']; app()"
     fi
-    python -c "from musedb.cli import app; import sys; sys.argv=['musedb','index','$WS','-w','$WS']; app()"
+    python -c "from opendb.cli import app; import sys; sys.argv=['opendb','index','$WS','-w','$WS']; app()"
     
     # Start server
-    FILEDB_BACKEND=sqlite FILEDB_MUSEDB_DIR="$WS/.musedb" python -c "import uvicorn; uvicorn.run('app.main:app', host='127.0.0.1', port=8000, log_level='warning')" &
+    FILEDB_BACKEND=sqlite FILEDB_OPENDB_DIR="$WS/.opendb" python -c "import uvicorn; uvicorn.run('app.main:app', host='127.0.0.1', port=8000, log_level='warning')" &
     SERVER_PID=$!
     sleep 4
     

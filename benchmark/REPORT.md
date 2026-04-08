@@ -1,4 +1,4 @@
-# MuseDB Benchmark Report
+# OpenDB Benchmark Report
 
 ## Part 1: FileDB vs CMD Agent
 
@@ -33,7 +33,7 @@ FileDB completed **23/24 task-model combinations** (96%) vs CMD's **19/24** (79%
 
 ## Part 2: FileDB (FTS) vs RAG (Vector Retrieval) at Scale
 
-> FTS keyword search vs OpenAI `text-embedding-3-small` cosine top-k. Both agents consume identical parsed text from MuseDB's parsers — the independent variable is retrieval method only.
+> FTS keyword search vs OpenAI `text-embedding-3-small` cosine top-k. Both agents consume identical parsed text from OpenDB's parsers — the independent variable is retrieval method only.
 
 ### Experimental Design
 

@@ -8,11 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from musedb_core.services.read_service import (
+from opendb_core.services.read_service import (
     AmbiguousFilenameError,
     resolve_filename,
 )
-from musedb_core.storage import _backends, init_backend
+from opendb_core.storage import _backends, init_backend
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ class TestPathAwareResolution:
         # Should fall through path step (0 hits) → fuzzy → finds r.pdf by basename
         # similarity, which IS a partial match. To make the test strict, use a
         # filename that won't fuzzy-match either.
-        from musedb_core.services.read_service import FileNotFoundError as FNF
+        from opendb_core.services.read_service import FileNotFoundError as FNF
         with pytest.raises((FNF, AmbiguousFilenameError)):
             await resolve_filename("other-dir/totally-different.xyz")
 

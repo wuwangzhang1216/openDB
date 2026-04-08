@@ -3,13 +3,13 @@
 ## Embedded Mode (SQLite)
 
 ```bash
-pip install musedb[cli]
+pip install opendb[cli]
 ```
 
 ```python
-from musedb import MuseDB
+from opendb import OpenDB
 
-db = MuseDB.open("./my_workspace")
+db = OpenDB.open("./my_workspace")
 await db.init()
 await db.index()
 
@@ -33,18 +33,18 @@ await db.close()
 ## Server Mode (PostgreSQL)
 
 ```bash
-pip install musedb[integration]
+pip install opendb[integration]
 ```
 
 ```python
-from musedb_integration import MuseDBClient
+from opendb_integration import OpenDBClient
 
 # Server mode
-db = MuseDBClient("postgresql://musedb:musedb@localhost:5432/musedb")
+db = OpenDBClient("postgresql://opendb:opendb@localhost:5432/opendb")
 await db.init()
 
 # Or embedded mode
-db = MuseDBClient(workspace_path="./my_workspace")
+db = OpenDBClient(workspace_path="./my_workspace")
 await db.init()
 
 # Same API as above
@@ -58,14 +58,14 @@ await db.close()
 ## Agent Framework Integration
 
 ```python
-from musedb_integration import MuseDBClient, create_tools
+from opendb_integration import OpenDBClient, create_tools
 from your_app.tool import ToolDefinition, ToolResult  # your base classes
 
-db = MuseDBClient(workspace_path="./my_workspace")
+db = OpenDBClient(workspace_path="./my_workspace")
 await db.init()
 
 # Creates tools (read, grep, glob) that replace built-in tools.
-# Falls back to local file operations when MuseDB is unavailable.
+# Falls back to local file operations when OpenDB is unavailable.
 for tool in create_tools(db, ToolDefinition, ToolResult):
     registry.register(tool)
 ```
@@ -75,7 +75,7 @@ for tool in create_tools(db, ToolDefinition, ToolResult):
 Copy-paste these into your agent for direct HTTP access:
 
 ```python
-MUSEDB = "http://localhost:8000"
+OPENDB = "http://localhost:8000"
 
 def read_file(filename: str, pages: str = "", lines: str = "", grep: str = "", format: str = "", numbered: bool = False) -> str | dict:
     """Read a file as plain text (or structured JSON for spreadsheets)."""
@@ -83,7 +83,7 @@ def read_file(filename: str, pages: str = "", lines: str = "", grep: str = "", f
     params = {k: v for k, v in {"pages": pages, "lines": lines, "grep": grep, "format": format}.items() if v}
     if numbered:
         params["numbered"] = "true"
-    resp = httpx.get(f"{MUSEDB}/read/{filename}", params=params)
+    resp = httpx.get(f"{OPENDB}/read/{filename}", params=params)
     return resp.json() if format == "json" else resp.text
 
 def search(query: str, mode: str = "fts", limit: int = 10, path: str = "", glob: str = "", case_insensitive: bool = False, context: int = 0) -> dict:
@@ -94,19 +94,19 @@ def search(query: str, mode: str = "fts", limit: int = 10, path: str = "", glob:
     if glob: body["glob"] = glob
     if case_insensitive: body["case_insensitive"] = True
     if context: body["context"] = context
-    return httpx.post(f"{MUSEDB}/search", json=body).json()
+    return httpx.post(f"{OPENDB}/search", json=body).json()
 
 def glob_files(pattern: str, path: str = "") -> dict:
     """Find files matching a glob pattern."""
     import httpx
     params = {"pattern": pattern}
     if path: params["path"] = path
-    return httpx.get(f"{MUSEDB}/glob", params=params).json()
+    return httpx.get(f"{OPENDB}/glob", params=params).json()
 
 def get_info() -> dict:
     """Get workspace statistics."""
     import httpx
-    return httpx.get(f"{MUSEDB}/info").json()
+    return httpx.get(f"{OPENDB}/info").json()
 ```
 
 ## OpenAI Function Calling Format

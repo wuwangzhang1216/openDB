@@ -1,11 +1,11 @@
-# MuseDB Logo Design Guide
+# OpenDB Logo Design Guide
 
 ## Logo Concept
 
-The MuseDB logo should represent:
+The OpenDB logo should represent:
 - **Universal parsing**: Multiple file formats unified
 - **Intelligence**: AI-friendly design
-- **Museum/Archive**: The "Muse" in MuseDB suggests a collection/archive
+- **Museum/Archive**: The "Muse" in OpenDB suggests a collection/archive
 - **Simplicity**: Clean, modern, tech-forward
 
 ## Design Ideas
@@ -27,7 +27,7 @@ The MuseDB logo should represent:
 ### Option 2: Museum + Database Hybrid
 ```
   ╔═══════╗
-  ║  🏛️   ║  +  💾  =  MuseDB
+  ║  🏛️   ║  +  💾  =  OpenDB
   ╚═══════╝
 ```
 - Combine classical museum columns/architecture with modern database iconography
@@ -58,13 +58,13 @@ The MuseDB logo should represent:
 - **Dimensions**: 1200x400px (3:1 ratio)
 - **Format**: PNG with transparency
 - **File size**: < 500KB
-- **Location**: `docs/assets/musedb-banner.png`
+- **Location**: `docs/assets/opendb-banner.png`
 
 ### Favicon/Icon
 - **Dimensions**: 512x512px (square)
 - **Format**: PNG with transparency
 - **Variations**: 16x16, 32x32, 64x64, 128x128, 256x256, 512x512
-- **Location**: `docs/assets/musedb-icon.png`
+- **Location**: `docs/assets/opendb-icon.png`
 
 ## Color Palette Suggestions
 
@@ -102,7 +102,7 @@ The MuseDB logo should represent:
 ### Prompt for AI Generation
 
 ```
-Create a modern, professional logo for "MuseDB", a universal document parser
+Create a modern, professional logo for "OpenDB", a universal document parser
 for AI agents. The logo should represent:
 - Multiple file formats (PDF, DOCX, images) being unified
 - Database/archive concept
@@ -123,9 +123,9 @@ Format: Simple enough to work at small sizes, distinctive at large sizes
 3. **Save to repository**:
    ```
    docs/assets/
-   ├── musedb-banner.png
-   ├── musedb-icon.png
-   └── musedb-logo.svg
+   ├── opendb-banner.png
+   ├── opendb-icon.png
+   └── opendb-logo.svg
    ```
 4. **Update README.md** with the banner image path
 5. **Add favicon** to any web interface

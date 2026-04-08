@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from musedb_core.storage.sqlite import SQLiteBackend
-from musedb_core.parsers.base import Page, ParseResult
+from opendb_core.storage.sqlite import SQLiteBackend
+from opendb_core.parsers.base import Page, ParseResult
 
 
 @pytest.fixture

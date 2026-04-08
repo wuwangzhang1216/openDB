@@ -1,29 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)",
-      "Bash(pip install:*)",
-      "Bash(python -c:*)",
-      "Bash(python -m pytest:*)",
-      "Bash(docker --version:*)",
-      "Bash(docker compose:*)",
-      "Bash(cd:*)",
-      "Bash(curl:*)",
-      "Bash(python:*)",
-      "WebFetch(domain:openai.github.io)",
-      "WebFetch(domain:developers.openai.com)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:medium.com)",
-      "Bash(pip show:*)",
-      "Bash(cmd /c \"dir /b e:\\\\fileDB\\\\benchmark\\\\benchmark_workspace\")",
-      "Bash(timeout:*)",
-      "Bash(del /Q \"e:\\\\fileDB\\\\benchmark\\\\benchmark_workspace\\\\*.py\")",
-      "Bash(del /q \"e:\\\\fileDB\\\\benchmark\\\\benchmark_workspace\\\\*.py\")",
-      "Bash(tasklist:*)",
-      "Bash(powershell:*)",
-      "Bash(del *.py *.txt)",
-      "WebFetch(domain:www.gnu.org)",
-      "Bash(git init:*)"
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Agent(*)",
+      "NotebookEdit(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "TodoWrite(*)",
+      "Bash(npm install:*)"
     ]
   }
 }

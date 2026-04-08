@@ -1,6 +1,6 @@
 """SQLite + FTS5 storage backend — zero-dependency embedded mode.
 
-Uses aiosqlite for async access. Requires ``pip install musedb[embedded]``.
+Uses aiosqlite for async access. Requires ``pip install opendb[embedded]``.
 
 Schema notes:
 - UUIDs stored as TEXT
@@ -107,7 +107,7 @@ class SQLiteBackend:
 
     Usage::
 
-        backend = SQLiteBackend(db_path=".musedb/metadata.db")
+        backend = SQLiteBackend(db_path=".opendb/metadata.db")
         await backend.init()
         ...
         await backend.close()
@@ -124,7 +124,7 @@ class SQLiteBackend:
         except ImportError:
             raise RuntimeError(
                 "aiosqlite is required for embedded mode. "
-                "Install it with: pip install musedb[embedded]"
+                "Install it with: pip install opendb[embedded]"
             )
 
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -155,7 +155,7 @@ class SQLiteBackend:
             await self._db.execute(
                 "CREATE VIRTUAL TABLE pages_fts USING fts5(text)"
             )
-            from musedb_core.utils.tokenizer import tokenize_for_fts
+            from opendb_core.utils.tokenizer import tokenize_for_fts
             async with self._db.execute(
                 "SELECT id, text FROM pages ORDER BY id"
             ) as cur:
@@ -234,7 +234,7 @@ class SQLiteBackend:
                 ),
             )
 
-            from musedb_core.utils.tokenizer import tokenize_for_fts
+            from opendb_core.utils.tokenizer import tokenize_for_fts
 
             for i, page in enumerate(parse_result.pages):
                 line_start, line_end = page_line_ranges[i]
@@ -459,7 +459,7 @@ class SQLiteBackend:
     async def search_fts(
         self, query: str, filters: dict, limit: int, offset: int
     ) -> dict:
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         # Tokenize query (handles CJK via jieba) then escape for FTS5
         fts_query = _escape_fts5(tokenize_for_fts(query))
@@ -631,7 +631,7 @@ class SQLiteBackend:
         tags: list[str],
         metadata: dict,
     ) -> dict:
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         async with self._write_lock:
             await self._db.execute("BEGIN")
@@ -667,7 +667,7 @@ class SQLiteBackend:
         limit: int,
         offset: int,
     ) -> dict:
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         fts_query = _escape_fts5(tokenize_for_fts(query))
 

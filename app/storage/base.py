@@ -11,7 +11,7 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class StorageBackend(Protocol):
-    """All database operations needed by the MuseDB service layer."""
+    """All database operations needed by the OpenDB service layer."""
 
     async def init(self) -> None:
         """Initialize the backend (create pool, open connection, create schema)."""

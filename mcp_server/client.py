@@ -1,4 +1,4 @@
-"""HTTP client for MuseDB REST API."""
+"""HTTP client for OpenDB REST API."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 
 import httpx
 
-MUSEDB_URL = os.environ.get("MUSEDB_URL", "http://localhost:8000")
+OPENDB_URL = os.environ.get("OPENDB_URL", "http://localhost:8000")
 
 _client: httpx.AsyncClient | None = None
 
@@ -16,7 +16,7 @@ async def get_client() -> httpx.AsyncClient:
     """Get or create the shared httpx client."""
     global _client
     if _client is None or _client.is_closed:
-        _client = httpx.AsyncClient(base_url=MUSEDB_URL, timeout=60.0)
+        _client = httpx.AsyncClient(base_url=OPENDB_URL, timeout=60.0)
     return _client
 
 
@@ -50,7 +50,7 @@ def _handle_error(response: httpx.Response) -> str:
             return f"Error: {data.get('detail', 'Bad request')}"
         except Exception:
             return "Error: Bad request"
-    return f"Error: MuseDB returned status {response.status_code}"
+    return f"Error: OpenDB returned status {response.status_code}"
 
 
 async def read_file(

@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI):
     settings.file_storage_path.mkdir(parents=True, exist_ok=True)
 
     if settings.backend == "sqlite":
-        db_path = settings.musedb_dir / "metadata.db"
-        settings.musedb_dir.mkdir(parents=True, exist_ok=True)
+        db_path = settings.opendb_dir / "metadata.db"
+        settings.opendb_dir.mkdir(parents=True, exist_ok=True)
         await init_backend("sqlite", db_path=db_path)
     else:
         # PostgreSQL: initialise pool first, then register backend
@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="MuseDB",
+    title="OpenDB",
     description="cat + grep for any file format",
     version="1.3.0",
     lifespan=lifespan,
@@ -62,7 +62,7 @@ app.add_middleware(
 )
 
 # Optional API key auth — only active if FILEDB_AUTH_API_KEY is set
-from musedb_core.middleware.auth import ApiKeyMiddleware
+from opendb_core.middleware.auth import ApiKeyMiddleware
 app.add_middleware(ApiKeyMiddleware, api_key=settings.auth_api_key if hasattr(settings, "auth_api_key") else "")
 
 
@@ -95,4 +95,4 @@ app.include_router(memory_router)
 
 @app.get("/")
 async def root():
-    return {"service": "musedb", "version": "1.3.0"}
+    return {"service": "opendb", "version": "1.3.0"}

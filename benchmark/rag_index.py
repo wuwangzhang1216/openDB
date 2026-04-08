@@ -1,7 +1,7 @@
 """In-memory RAG index over FileDB's parsed text.
 
 Fetches text directly from FileDB's /files + /read endpoints to guarantee
-identical parsed content to musedb's FTS. Embeds via OpenAI, stores in a
+identical parsed content to opendb's FTS. Embeds via OpenAI, stores in a
 numpy matrix, queries by cosine similarity top-k.
 
 No vector-DB dependency. No framework. Pure embeddings + numpy + httpx.

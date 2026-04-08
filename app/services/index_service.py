@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 _EXCLUDE_DIRS = {
     ".git", "__pycache__", "node_modules", ".venv", "venv",
     ".idea", ".vscode", ".tox", ".mypy_cache", ".pytest_cache",
-    ".musedb",  # embedded workspace metadata directory
+    ".opendb",  # embedded workspace metadata directory
 }
 _EXCLUDE_FILES = {".DS_Store", "thumbs.db", "Thumbs.db", "desktop.ini"}
 

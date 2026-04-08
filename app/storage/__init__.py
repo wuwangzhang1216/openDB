@@ -5,7 +5,7 @@ Usage in application startup::
     from app.storage import init_backend, close_backend
 
     await init_backend("postgres")   # server mode (default)
-    await init_backend("sqlite", db_path=".musedb/metadata.db")  # embedded mode
+    await init_backend("sqlite", db_path=".opendb/metadata.db")  # embedded mode
 
 Then anywhere in the service layer::
 
@@ -40,7 +40,7 @@ async def init_backend(
 
     if backend_type == "sqlite":
         from app.storage.sqlite import SQLiteBackend
-        db_path = kwargs.get("db_path", ".musedb/metadata.db")
+        db_path = kwargs.get("db_path", ".opendb/metadata.db")
         _backend = SQLiteBackend(db_path=db_path)
         await _backend.init()
         logger.info("Using SQLite backend at %s", db_path)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-LongMemEval Benchmark for MuseDB Memory Pipeline
+LongMemEval Benchmark for OpenDB Memory Pipeline
 =====================================================
 
-Evaluates MuseDB's memory_store + memory_recall against the LongMemEval
+Evaluates OpenDB's memory_store + memory_recall against the LongMemEval
 benchmark (500 questions, 6 types). Measures session-level Recall@K —
 the fraction of questions where at least one evidence session appears
 in the top-K recalled memories.
@@ -14,7 +14,7 @@ Usage:
     python longmemeval_bench.py [--data longmemeval_oracle.json] [--ks 1,3,5,10] [--limit N]
 
 Requirements:
-    pip install musedb   (this project)
+    pip install opendb   (this project)
 """
 
 from __future__ import annotations
@@ -32,12 +32,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Add project root to path so we can import musedb_core directly
+# Add project root to path so we can import opendb_core directly
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from musedb_core.storage import init_backend, get_backend, close_backend
+from opendb_core.storage import init_backend, get_backend, close_backend
 
 # ============================================================
 # Config
@@ -172,7 +172,7 @@ async def run_benchmark(
     print()
 
     results: list[QuestionResult] = []
-    tmp_root = Path(tempfile.mkdtemp(prefix="musedb_longmemeval_"))
+    tmp_root = Path(tempfile.mkdtemp(prefix="opendb_longmemeval_"))
 
     try:
         for idx, q in enumerate(questions):
@@ -214,7 +214,7 @@ def print_report(results: list[QuestionResult], ks: list[int]) -> dict:
 
     # Overall Recall@K
     print("\n" + "=" * 60)
-    print("LongMemEval Benchmark Results — MuseDB Memory Pipeline")
+    print("LongMemEval Benchmark Results — OpenDB Memory Pipeline")
     print("=" * 60)
     print(f"Questions evaluated: {n}")
     print()
@@ -301,7 +301,7 @@ def print_report(results: list[QuestionResult], ks: list[int]) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="LongMemEval benchmark for MuseDB memory pipeline"
+        description="LongMemEval benchmark for OpenDB memory pipeline"
     )
     parser.add_argument(
         "--data", default=str(DEFAULT_DATA),

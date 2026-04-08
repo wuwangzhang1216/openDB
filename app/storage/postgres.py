@@ -130,7 +130,7 @@ class PostgresBackend:
                         json.dumps(merged_metadata),
                     )
 
-                    from musedb_core.utils.tokenizer import tokenize_for_fts
+                    from opendb_core.utils.tokenizer import tokenize_for_fts
                     for i, page in enumerate(parse_result.pages):
                         line_start, line_end = page_line_ranges[i]
                         await conn.execute(
@@ -360,7 +360,7 @@ class PostgresBackend:
     async def search_fts(
         self, query: str, filters: dict, limit: int, offset: int
     ) -> dict:
-        from musedb_core.utils.tokenizer import _CJK_RE, tokenize_for_fts
+        from opendb_core.utils.tokenizer import _CJK_RE, tokenize_for_fts
         from app.database import get_pool
 
         has_cjk = bool(_CJK_RE.search(query))
@@ -573,7 +573,7 @@ class PostgresBackend:
     ) -> dict:
         import uuid as _uuid
         from app.database import get_pool
-        from musedb_core.utils.tokenizer import tokenize_for_fts
+        from opendb_core.utils.tokenizer import tokenize_for_fts
 
         pool = await get_pool()
         async with pool.acquire() as conn:
@@ -604,7 +604,7 @@ class PostgresBackend:
         pinned_only: bool = False,
     ) -> dict:
         from app.database import get_pool
-        from musedb_core.utils.tokenizer import _CJK_RE, tokenize_for_fts
+        from opendb_core.utils.tokenizer import _CJK_RE, tokenize_for_fts
 
         pool = await get_pool()
 
@@ -797,10 +797,10 @@ class PostgresBackend:
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# Helpers — delegated to musedb_core.storage.shared
+# Helpers — delegated to opendb_core.storage.shared
 # ---------------------------------------------------------------------------
 
-from musedb_core.storage.shared import (  # noqa: E402
+from opendb_core.storage.shared import (  # noqa: E402
     add_pg_filters as _add_pg_filters,
     pg_memory_row as _pg_memory_row,
     pg_file_row as _pg_file_row,

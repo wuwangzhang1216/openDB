@@ -7,7 +7,7 @@ import sys
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MuseDB MCP Server")
+    parser = argparse.ArgumentParser(description="OpenDB MCP Server")
     parser.add_argument(
         "--transport",
         choices=["stdio", "streamable_http"],

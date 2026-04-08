@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql://musedb:musedb@localhost:5432/musedb"
+    database_url: str = "postgresql://opendb:opendb@localhost:5432/opendb"
     db_pool_min: int = 5
     db_pool_max: int = 20
 
@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     # Storage backend: "postgres" (default, requires PostgreSQL) or "sqlite" (embedded, zero-config)
     backend: str = "postgres"
 
-    # SQLite embedded mode — path to the .musedb directory
-    musedb_dir: Path = Path(".musedb")
+    # SQLite embedded mode — path to the .opendb directory
+    opendb_dir: Path = Path(".opendb")
 
     # Server
     host: str = "0.0.0.0"
