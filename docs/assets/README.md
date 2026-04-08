@@ -42,4 +42,4 @@ The banner is used in the README.md header:
 
 ## License
 
-Logo and branding assets are part of the MuseDB project and licensed under AGPL-3.0.
+Logo and branding assets are part of the MuseDB project and licensed under Apache 2.0.
