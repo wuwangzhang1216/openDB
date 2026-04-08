@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>The file database and memory store built for AI agents.</strong><br/>
-  Parse once, query forever. <code>cat</code> + <code>grep</code> for any file format. <code>store</code> + <code>recall</code> for agent memory.
+  <strong>3 lines to give your AI agent a file database and long-term memory.</strong><br/>
+  Read any file. Search any workspace. Remember everything.
 </p>
 
 <p align="center">
@@ -18,7 +18,174 @@
 
 ---
 
-MuseDB turns any file — code, PDF, DOCX, PPTX, XLSX, CSV, images — into instantly searchable plain text, and gives agents persistent long-term memory with full-text search. 7 MCP tools provide file access, workspace search, and memory store/recall — no parsing scripts, no vector database.
+```bash
+pip install musedb[cli]
+musedb index ./my_workspace
+musedb serve-mcp
+```
+
+That's it. Your agent now has 7 MCP tools — read any file format, search across documents and code, and store/recall persistent memories. Works with every major agent framework out of the box.
+
+## Works with Every Agent Framework
+
+MuseDB speaks [MCP](https://modelcontextprotocol.io/) — the universal standard supported by all major frameworks. Pick yours:
+
+<details>
+<summary><b>Claude Code / Cursor / Windsurf</b></summary>
+
+Add to your MCP config (`.mcp.json`, `mcp_servers` in settings, etc.):
+
+```json
+{
+  "mcpServers": {
+    "musedb": {
+      "command": "musedb",
+      "args": ["serve-mcp", "--workspace", "/path/to/workspace"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Agent SDK (Anthropic)</b></summary>
+
+```python
+from claude_agent_sdk import query, ClaudeAgentOptions
+from claude_agent_sdk.mcp import MCPServerStdio
+
+async with MCPServerStdio("musedb", ["serve-mcp", "--workspace", "./docs"]) as musedb:
+    options = ClaudeAgentOptions(
+        model="claude-sonnet-4-6",
+        mcp_servers={"musedb": musedb},
+        allowed_tools=["mcp__musedb__*"],
+    )
+    async for msg in query(prompt="Summarize the Q4 report", options=options):
+        print(msg.content)
+```
+
+</details>
+
+<details>
+<summary><b>OpenAI Agents SDK</b></summary>
+
+```python
+from agents import Agent, Runner
+from agents.mcp import MCPServerStdio
+
+async with MCPServerStdio(name="musedb", params={
+    "command": "musedb", "args": ["serve-mcp", "--workspace", "./docs"]
+}) as musedb:
+    agent = Agent(name="Analyst", model="gpt-4.1", mcp_servers=[musedb])
+    result = await Runner.run(agent, "Find all revenue mentions in the PDF reports")
+    print(result.final_output)
+```
+
+</details>
+
+<details>
+<summary><b>LangChain / LangGraph</b></summary>
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+
+async with MultiServerMCPClient({
+    "musedb": {"command": "musedb", "args": ["serve-mcp", "--workspace", "./docs"], "transport": "stdio"}
+}) as client:
+    agent = create_react_agent("anthropic:claude-sonnet-4-6", await client.get_tools())
+    result = await agent.ainvoke({"messages": [("user", "What changed in the latest spec?")]})
+```
+
+</details>
+
+<details>
+<summary><b>CrewAI</b></summary>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.tools import MCPServerStdio
+
+musedb = MCPServerStdio(command="musedb", args=["serve-mcp", "--workspace", "./docs"])
+
+analyst = Agent(role="Document Analyst", goal="Analyze workspace files", mcps=[musedb])
+task = Task(description="Summarize all PDF reports in the workspace", agent=analyst)
+Crew(agents=[analyst], tasks=[task]).kickoff()
+```
+
+</details>
+
+<details>
+<summary><b>AutoGen (Microsoft)</b></summary>
+
+```python
+from autogen_ext.tools.mcp import mcp_server_tools, StdioServerParams
+from autogen_agentchat.agents import AssistantAgent
+
+tools = await mcp_server_tools(StdioServerParams(command="musedb", args=["serve-mcp", "--workspace", "./docs"]))
+agent = AssistantAgent(name="analyst", model_client=client, tools=tools)
+await agent.run("Search for deployment-related memories")
+```
+
+</details>
+
+<details>
+<summary><b>Google ADK</b></summary>
+
+```python
+from google.adk.agents import LlmAgent
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+
+agent = LlmAgent(
+    model="gemini-2.5-flash",
+    name="analyst",
+    tools=[McpToolset(connection_params=StdioConnectionParams(command="musedb", args=["serve-mcp", "--workspace", "./docs"]))],
+)
+```
+
+</details>
+
+<details>
+<summary><b>Mastra (TypeScript)</b></summary>
+
+```typescript
+import { MCPClient } from "@mastra/mcp";
+import { Agent } from "@mastra/core/agent";
+
+const mcp = new MCPClient({
+  servers: { musedb: { command: "musedb", args: ["serve-mcp", "--workspace", "./docs"] } },
+});
+
+const agent = new Agent({
+  name: "Analyst",
+  model: "openai/gpt-4.1",
+  tools: await mcp.listTools(),
+});
+```
+
+</details>
+
+<details>
+<summary><b>Python (direct, no framework)</b></summary>
+
+```python
+from musedb import MuseDB
+
+db = MuseDB.open("./my_workspace")
+await db.init()
+await db.index()
+
+text    = await db.read("report.pdf", pages="1-3")
+results = await db.search("quarterly revenue")
+await db.memory_store("User prefers concise answers")
+memories = await db.memory_recall("user preferences")
+
+await db.close()
+```
+
+</details>
 
 ## Why MuseDB?
 
@@ -47,7 +214,7 @@ read_file("report.pdf")  # 50 tokens, always works
 | Answer quality | 2.4-3.2 / 5 | **3.4-3.9 / 5** |
 | Success rate | 79% | **100%** |
 
-**MuseDB FTS vs RAG vector retrieval (25-325 documents):**
+**FTS vs RAG vector retrieval (25-325 documents):**
 
 | Scale | FTS Tokens Saved | FTS Quality | RAG Quality |
 |-------|-----------------|------------|------------|
@@ -57,31 +224,11 @@ read_file("report.pdf")  # 50 tokens, always works
 
 FTS quality **improves with scale** while RAG degrades from distractor noise. See [benchmark/REPORT.md](benchmark/REPORT.md) for methodology.
 
-## Quick Start
-
-```bash
-pip install musedb[cli]
-musedb index ./my_workspace       # parse & index everything
-musedb serve-mcp                  # start MCP server (stdio)
-```
-
-Configure in your agent (Claude Code, Cursor, etc.):
-
-```yaml
-mcp:
-  musedb:
-    transport: stdio
-    command: musedb
-    args: ["serve-mcp", "--workspace", "/path/to/workspace"]
-```
-
-That's it. Your agent now has 7 tools: `musedb_read`, `musedb_search`, `musedb_glob`, `musedb_info`, `musedb_memory_store`, `musedb_memory_recall`, and `musedb_memory_forget`.
-
 ## MCP Tools
 
-### `musedb_info` — Workspace overview
+7 tools, auto-discovered by any MCP-compatible agent:
 
-Get file counts, type distribution, and recent activity. Use as the first step in a new workspace.
+### `musedb_info` — Workspace overview
 
 ```
 musedb_info()
@@ -112,24 +259,48 @@ musedb_search(query="quarterly revenue")                           # FTS documen
 musedb_search(query="TODO", path="/src", case_insensitive=True)    # Case insensitive
 ```
 
-Search results include `updated_at` timestamps so agents can judge information freshness.
-
 ### `musedb_glob` — Find files
-
-Glob pattern matching, sorted by modification time (newest first).
 
 ```
 musedb_glob(pattern="**/*.py", path="/workspace")
 musedb_glob(pattern="src/**/*.{ts,tsx}", path="/workspace")
 ```
 
+### `musedb_memory_store` — Store a memory
+
+```
+musedb_memory_store(content="User prefers dark mode", memory_type="semantic")
+musedb_memory_store(content="Deployed v2.1, rollback required", memory_type="episodic", tags=["deploy"])
+musedb_memory_store(content="Always run tests before merging", memory_type="procedural")
+musedb_memory_store(content="User is a senior engineer at Acme", pinned=true)
+```
+
+Three memory types: **semantic** (facts/knowledge), **episodic** (events/outcomes), **procedural** (workflows/rules).
+
+Set `pinned=true` for critical facts — they get 10x ranking boost and can be retrieved instantly with `pinned_only=true`.
+
+### `musedb_memory_recall` — Search memories
+
+Results ranked by **relevance × recency**. Pinned memories always surface first.
+
+```
+musedb_memory_recall(query="user preferences")
+musedb_memory_recall(query="deploy", memory_type="episodic")
+musedb_memory_recall(pinned_only=true)   # Instant — no search needed, ideal for agent startup
+```
+
+### `musedb_memory_forget` — Delete memories
+
+```
+musedb_memory_forget(memory_id="abc-123-def")
+musedb_memory_forget(query="outdated preferences")
+```
+
 ## Agent Memory
 
-MuseDB doubles as a **long-term memory store** for AI agents. Memories are lightweight text entries indexed with the same FTS infrastructure as workspace files — but stored separately so they never pollute file search results.
+MuseDB doubles as a **long-term memory store** for AI agents — persistent across sessions, ranked by relevance and recency, with pinned priorities.
 
 ### Why not Markdown files?
-
-Most agent memory systems (Claude Code, Cursor, etc.) store memories as Markdown files with linear scan retrieval. This works for 50 notes — it breaks at scale:
 
 | | Markdown files | MuseDB Memory |
 |---|---|---|
@@ -138,16 +309,16 @@ Most agent memory systems (Claude Code, Cursor, etc.) store memories as Markdown
 | **Capacity** | Claude Code: 200-line hard limit | No hard limit, indexed |
 | **CJK** | Broken (no word segmentation) | jieba tokenization, native CJK |
 | **Staleness** | Old = new, manual cleanup | `0.5^(age/30)` auto-decay |
-| **Structure** | Free text + frontmatter | tags[], metadata{}, memory_type |
+| **Structure** | Free text + frontmatter | tags[], metadata{}, memory_type, pinned |
 | **Agent cost** | Tokens spent on file management | 3 API calls: store/recall/forget |
 
 ### Why not vector databases?
 
-MuseDB's FTS benchmark shows keyword search **improves with scale** while vector/RAG degrades (4.6/5 vs 3.5/5 at 325 docs). The same applies to memory: vector similarity retrieves topically-similar noise, while FTS retrieves exactly what the agent asked for.
+FTS quality **improves with scale** while vector/RAG degrades. Vector similarity retrieves topically-similar noise; FTS retrieves exactly what the agent asked for.
 
 ### LongMemEval benchmark
 
-We tested MuseDB's memory pipeline against [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025) — 470 questions across 6 types: single-session extraction, multi-session reasoning, temporal reasoning, knowledge updates, and preference recall.
+Tested against [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025) — 470 questions across 6 types:
 
 | | MuseDB (FTS5) | MemPalace (ChromaDB) |
 |---|---|---|
@@ -157,108 +328,7 @@ We tested MuseDB's memory pipeline against [LongMemEval](https://github.com/xiao
 | Median recall latency | **0.9 ms** | — |
 | Total benchmark time | **32 s** | ~5 min |
 
-All 6 question types score 100%. Reproduce with `python benchmark/longmemeval_bench.py`. See [benchmark/longmemeval_results.json](benchmark/longmemeval_results.json) for per-question details.
-
-### `musedb_memory_store` — Store a memory
-
-```
-musedb_memory_store(content="User prefers dark mode and compact layout", memory_type="semantic")
-musedb_memory_store(content="Deployed v2.1 to prod on 2025-03-15, rollback required", memory_type="episodic", tags=["deploy"])
-musedb_memory_store(content="Always run integration tests before merging to main", memory_type="procedural")
-```
-
-Three memory types:
-- **semantic** — Facts, preferences, domain knowledge (default)
-- **episodic** — Past events, task outcomes, interaction history
-- **procedural** — Learned workflows, rules, best practices
-
-**Pinned memories** — Set `pinned=true` for critical facts that should always surface first. Pinned memories get a 10x ranking boost in search results, and can be retrieved instantly without FTS search:
-
-```
-musedb_memory_store(content="User is a senior backend engineer at Acme Corp", pinned=true)
-musedb_memory_recall(pinned_only=true)  # Returns all pinned memories — ideal for agent startup
-```
-
-### `musedb_memory_recall` — Search memories
-
-Results ranked by **relevance × recency** — recent memories score higher than older ones with the same keyword match. Pinned memories always surface first.
-
-```
-musedb_memory_recall(query="user preferences")
-→ Found 3 memories:
-    📌 [semantic] (score: 8.2340, created: 2025-03-20T10:00:00Z)
-      User is a senior backend engineer at Acme Corp
-    [semantic] (score: 0.8234, created: 2025-03-20T10:00:00Z)
-      User prefers dark mode and compact layout
-    [semantic] (score: 0.3112, created: 2025-01-05T08:00:00Z)
-      User prefers verbose error messages
-```
-
-Filter by type, tags, or retrieve only pinned:
-```
-musedb_memory_recall(query="deploy", memory_type="episodic")
-musedb_memory_recall(query="testing", tags=["ci"])
-musedb_memory_recall(pinned_only=true)   # All pinned memories, no search query needed
-```
-
-### `musedb_memory_forget` — Delete memories
-
-```
-musedb_memory_forget(memory_id="abc-123-def")        # Delete by ID
-musedb_memory_forget(query="outdated preferences")   # Delete by search
-```
-
-## Python Library
-
-```bash
-pip install musedb[cli]
-```
-
-```python
-from musedb import MuseDB
-
-db = MuseDB.open("./my_workspace")
-await db.init()
-await db.index()
-
-# Workspace
-stats   = await db.info()                                # workspace overview
-text    = await db.read("report.pdf", pages="1-3")       # read any file
-results = await db.search("quarterly revenue")            # full-text search
-
-# Memory
-await db.memory_store("User prefers concise answers", memory_type="semantic")
-await db.memory_store("User is a senior engineer", pinned=True)  # always surfaces first
-memories = await db.memory_recall("user preferences")    # FTS + time-decay
-pinned   = await db.memory_recall("", pinned_only=True)  # agent startup context
-await db.memory_forget(memory_id="abc-123")              # delete by ID
-
-await db.close()
-```
-
-For server mode (PostgreSQL) or agent framework integration, see [docs/python-library.md](docs/python-library.md).
-
-## REST API
-
-MuseDB also exposes a full HTTP API. Run with `musedb serve` (embedded) or `docker-compose up` (PostgreSQL).
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/info` | `GET` | Workspace statistics (file counts, types, recent files) |
-| `/read/{filename}` | `GET` | Read file (`?pages=`, `?lines=`, `?grep=`, `?format=json`, `?numbered=true`) |
-| `/search` | `POST` | Full-text search or regex grep (`{"query", "mode", "path", "glob", ...}`) |
-| `/glob` | `GET` | Find files by glob pattern (`?pattern=`, `?path=`) |
-| `/index` | `POST` | Index a directory and start watching (`?path=`) |
-| `/files` | `POST` | Upload a single file |
-| `/files` | `GET` | List files with metadata |
-| `/files/{id}` | `GET`/`DELETE` | File details / delete |
-| `/watch` | `GET` | List active watchers |
-| `/watch/{id}` | `GET`/`DELETE` | Watcher details / stop |
-| `/memory` | `POST` | Store a memory (`{"content", "memory_type", "pinned", "tags", "metadata"}`) |
-| `/memory` | `GET` | List memories (`?memory_type=`, `?tags=`, `?limit=`, `?offset=`) |
-| `/memory/recall` | `POST` | Search memories with time-decay ranking (`{"query", "memory_type", "tags", "pinned_only"}`) |
-| `/memory/forget` | `POST` | Delete memories (`{"memory_id"}` or `{"query", "memory_type"}`) |
-| `/health` | `GET` | Health check |
+All 6 question types score 100%. Reproduce: `python benchmark/longmemeval_bench.py`
 
 ## Supported Formats
 
@@ -275,15 +345,31 @@ MuseDB also exposes a full HTTP API. Run with `musedb serve` (embedded) or `dock
 
 ## Key Features
 
+- **3-line setup** — `pip install`, `index`, `serve-mcp` — works with every agent framework
+- **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for memory
+- **Agent memory** — FTS + time-decay ranking, pinned memories, 100% on LongMemEval; no vector DB needed
 - **Dual-mode** — Embedded (SQLite, zero-config) or Server (PostgreSQL, shared access); same API
-- **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for agent memory
-- **Agent memory** — Persistent long-term memory with FTS + time-decay ranking, pinned memories, 100% on LongMemEval; no vector DB needed
 - **Real-time sync** — Directories are watched via OS-native events after indexing
-- **Full-text search** — FTS5 (SQLite) / tsvector (PostgreSQL) with jieba CJK tokenization
+- **Full-text search** — FTS5 / tsvector with jieba CJK tokenization
 - **Structured output** — Spreadsheets as `{sheets: [{columns, rows}]}` for direct analysis
 - **Fuzzy filename resolution** — Find files by exact name, partial match, path, or UUID
-- **Duplicate detection** — SHA-256 deduplication across uploads and directory scans
-- **Search provenance** — Results include `updated_at` timestamps for freshness judgment
+
+## REST API
+
+MuseDB also exposes a full HTTP API. Run with `musedb serve` (embedded) or `docker-compose up` (PostgreSQL).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/info` | `GET` | Workspace statistics |
+| `/read/{filename}` | `GET` | Read file (`?pages=`, `?lines=`, `?grep=`, `?format=json`) |
+| `/search` | `POST` | Full-text search or regex grep |
+| `/glob` | `GET` | Find files by glob pattern |
+| `/index` | `POST` | Index a directory and start watching |
+| `/files` | `POST`/`GET` | Upload or list files |
+| `/memory` | `POST`/`GET` | Store or list memories |
+| `/memory/recall` | `POST` | Search memories with ranking |
+| `/memory/forget` | `POST` | Delete memories |
+| `/health` | `GET` | Health check |
 
 ## Configuration
 
