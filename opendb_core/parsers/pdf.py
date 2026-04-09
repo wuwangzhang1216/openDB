@@ -89,7 +89,7 @@ class PdfParser:
                 image, lang=settings.ocr_languages
             )
             return text
-        except Exception:
+        except (ImportError, OSError, RuntimeError):
             logger.warning("OCR failed for page %s", page.number, exc_info=True)
             return ""
 
@@ -123,7 +123,7 @@ class PdfParser:
                 parts.append("\n".join(formatted_rows))
 
             return "\n\n".join(parts)
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             logger.debug("Table extraction failed for page %s", page.number, exc_info=True)
             return ""
 
@@ -146,7 +146,7 @@ class PdfParser:
             # Only return if significantly larger than body text
             if max_size > 14:
                 return title_text
-        except Exception:
+        except (KeyError, AttributeError, TypeError):
             pass
         return None
 

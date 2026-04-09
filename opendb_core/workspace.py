@@ -90,7 +90,7 @@ class Workspace:
         if config_path.exists():
             try:
                 config = WorkspaceConfig.from_dict(json.loads(config_path.read_text()))
-            except Exception as e:
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                 logger.warning("Could not load workspace config at %s: %s", config_path, e)
         return cls(root=root, config=config)
 

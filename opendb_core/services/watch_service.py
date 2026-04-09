@@ -141,7 +141,7 @@ async def _consume_queue(watch_id: str, queue: asyncio.Queue):
             # Check MIME / parser support
             try:
                 mime = _magic.from_file(str(path), mime=True)
-            except Exception:
+            except OSError:
                 logger.debug("watch %s: cannot detect MIME for %s", watch_id, path)
                 continue
             if not _has_parser(mime):

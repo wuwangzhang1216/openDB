@@ -43,7 +43,7 @@ class ImageParser:
                 image = image.convert("L")
                 image = ImageEnhance.Contrast(image).enhance(1.5)
                 return pytesseract.image_to_string(image, lang=settings.ocr_languages)
-        except Exception:
+        except (ImportError, OSError, RuntimeError):
             return ""
 
 

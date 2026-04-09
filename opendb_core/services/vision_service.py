@@ -142,6 +142,6 @@ async def _tesseract_fallback(file_path: Path) -> str:
     except ImportError:
         logger.warning("Tesseract/Pillow not installed — cannot OCR %s", file_path)
         return "(no API key configured; install pytesseract + Pillow for OCR fallback)"
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         logger.warning("Tesseract OCR failed for %s: %s", file_path, e)
         return f"(OCR failed: {e})"

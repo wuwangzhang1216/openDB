@@ -1,6 +1,6 @@
 import pytest
 
-from app import database
+from opendb_core import database
 
 
 class TestGetPool:

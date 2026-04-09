@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.index_service import _is_excluded, scan_directory
+from opendb_core.services.index_service import _is_excluded, scan_directory
 
 
 class TestScanDirectory:

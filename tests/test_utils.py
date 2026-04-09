@@ -1,5 +1,5 @@
-from app.parsers.base import Page
-from app.utils.text import (
+from opendb_core.parsers.base import Page
+from opendb_core.utils.text import (
     assemble_text,
     build_line_index,
     extract_lines,

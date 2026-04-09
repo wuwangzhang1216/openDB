@@ -96,7 +96,7 @@ async def index_directory(
             try:
                 mime = await asyncio.to_thread(magic.from_file, str(f), mime=True)
                 return (f, mime)
-            except Exception:
+            except OSError:
                 return (f, None)
 
     mime_results = await asyncio.gather(*[_detect_mime(f) for f in files])

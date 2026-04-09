@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from app.utils.hashing import compute_sha256
+from opendb_core.utils.hashing import compute_sha256
 
 
 class TestComputeSha256:

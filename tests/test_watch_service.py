@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.watch_service import (
+from opendb_core.services.watch_service import (
     WatchEntry,
     _IngestHandler,
     _watchers,
@@ -163,7 +163,7 @@ class TestWatchLifecycle:
     def test_max_watchers_enforced(self, tmp_path: Path):
         loop = asyncio.new_event_loop()
         try:
-            with patch("app.services.watch_service.settings") as mock_settings:
+            with patch("opendb_core.services.watch_service.settings") as mock_settings:
                 mock_settings.watch_max_watchers = 2
                 mock_settings.index_exclude_patterns = []
 

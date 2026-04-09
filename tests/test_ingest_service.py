@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.config import settings
-from app.services.ingest_service import ingest_file
+from opendb_core.config import settings
+from opendb_core.services.ingest_service import ingest_file
 
 
 def _make_mock_backend(check_duplicate_return=None):
@@ -50,8 +50,8 @@ class TestIngestFileDuplicate:
         }
         mock_backend = _make_mock_backend(check_duplicate_return=duplicate_record)
 
-        with patch("app.services.ingest_service.get_backend", return_value=mock_backend):
-            with patch("app.services.ingest_service.settings") as mock_settings:
+        with patch("opendb_core.services.ingest_service.get_backend", return_value=mock_backend):
+            with patch("opendb_core.services.ingest_service.settings") as mock_settings:
                 mock_settings.max_file_size = settings.max_file_size
                 mock_settings.file_storage_path = tmp_path
                 mock_settings.ocr_enabled = False
@@ -70,15 +70,15 @@ class TestIngestFileCleanup:
         content = b"some content"
         mock_backend = _make_mock_backend(check_duplicate_return=None)
 
-        with patch("app.services.ingest_service.get_backend", return_value=mock_backend):
-            with patch("app.services.ingest_service.settings") as mock_settings:
+        with patch("opendb_core.services.ingest_service.get_backend", return_value=mock_backend):
+            with patch("opendb_core.services.ingest_service.settings") as mock_settings:
                 mock_settings.max_file_size = settings.max_file_size
                 mock_settings.file_storage_path = tmp_path
                 mock_settings.ocr_enabled = False
                 mock_settings.ocr_languages = settings.ocr_languages
 
                 with patch(
-                    "app.services.ingest_service.parse_file",
+                    "opendb_core.services.ingest_service.parse_file",
                     side_effect=RuntimeError("parse boom"),
                 ):
                     with pytest.raises(RuntimeError, match="parse boom"):

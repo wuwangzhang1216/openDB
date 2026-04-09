@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.services.ingest_service import infer_document_type
+from opendb_core.services.ingest_service import infer_document_type
 
 
 class TestInferDocumentType:

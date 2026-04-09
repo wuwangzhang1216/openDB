@@ -70,7 +70,7 @@ class PptxParser:
             if slide.has_notes_slide:
                 notes_slide = slide.notes_slide
                 return notes_slide.notes_text_frame.text.strip()
-        except Exception:
+        except (AttributeError, RuntimeError):
             pass
         return ""
 

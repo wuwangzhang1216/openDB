@@ -164,7 +164,7 @@ class XlsxParser:
             if props.modified:
                 result["modified"] = props.modified.isoformat()
             result["sheet_names"] = wb.sheetnames
-        except Exception:
+        except (AttributeError, ValueError, TypeError):
             logger.warning("XLSX metadata extraction failed", exc_info=True)
         return result
 
@@ -175,13 +175,13 @@ class CsvParser:
 
         try:
             df = pd.read_csv(str(file_path))
-        except Exception:
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
             # Fallback encodings
             for enc in ("latin-1", "utf-16", "cp1252"):
                 try:
                     df = pd.read_csv(str(file_path), encoding=enc)
                     break
-                except Exception:
+                except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
                     continue
             else:
                 return ParseResult(
@@ -223,12 +223,12 @@ class CsvParser:
 
         try:
             df = pd.read_csv(str(file_path))
-        except Exception:
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
             for enc in ("latin-1", "utf-16", "cp1252"):
                 try:
                     df = pd.read_csv(str(file_path), encoding=enc)
                     break
-                except Exception:
+                except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
                     continue
             else:
                 return {"sheets": [{"name": "Data", "columns": [], "rows": [], "total_rows": 0}]}

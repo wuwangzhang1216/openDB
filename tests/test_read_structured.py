@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.parsers.spreadsheet import XlsxParser, CsvParser, _serialize_cell
+from opendb_core.parsers.spreadsheet import XlsxParser, CsvParser, _serialize_cell
 
 
 # ---------------------------------------------------------------------------

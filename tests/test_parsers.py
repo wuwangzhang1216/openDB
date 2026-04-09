@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from app.parsers.base import Page, ParseResult
-from app.parsers.registry import get_parser
+from opendb_core.parsers.base import Page, ParseResult
+from opendb_core.parsers.registry import get_parser
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

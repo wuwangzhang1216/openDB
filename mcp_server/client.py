@@ -34,7 +34,7 @@ def _handle_error(response: httpx.Response) -> str:
         try:
             data = response.json()
             return f"Error: {data.get('detail', 'Not found')}"
-        except Exception:
+        except (ValueError, KeyError):
             return "Error: Resource not found"
     if response.status_code == 409:
         try:
@@ -42,13 +42,13 @@ def _handle_error(response: httpx.Response) -> str:
             candidates = data.get("candidates", [])
             names = [c.get("filename", c.get("id", "?")) for c in candidates]
             return f"Error: Ambiguous filename. Candidates: {', '.join(names)}"
-        except Exception:
+        except (ValueError, KeyError):
             return "Error: Ambiguous filename"
     if response.status_code == 400:
         try:
             data = response.json()
             return f"Error: {data.get('detail', 'Bad request')}"
-        except Exception:
+        except (ValueError, KeyError):
             return "Error: Bad request"
     return f"Error: OpenDB returned status {response.status_code}"
 
