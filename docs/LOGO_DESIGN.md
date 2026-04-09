@@ -1,145 +1,85 @@
-# OpenDB Logo Design Guide
+# OpenDB Logo & Brand Guide
 
-## Logo Concept
+## Logo
 
-The OpenDB logo should represent:
-- **Universal parsing**: Multiple file formats unified
-- **Intelligence**: AI-friendly design
-- **Museum/Archive**: The "Muse" in OpenDB suggests a collection/archive
-- **Simplicity**: Clean, modern, tech-forward
+The OpenDB logo is a stylized **"D"** inside a rounded square, with a horizontal bar that extends beyond the left edge — representing "open."
 
-## Design Ideas
+### Assets
 
-### Option 1: Geometric File Stack
-```
-┌─────────┐
-│ PDF     │
-├─────────┤
-│ DOCX    │  →  💾
-├─────────┤
-│ XLSX    │
-└─────────┘
-```
-- Stack of different file types converging into a unified database
-- Color scheme: Blue gradient (trust, technology) with accent colors for different formats
-- Modern, flat design style
+| File | Description |
+|------|-------------|
+| `docs/assets/opendb-icon.svg` | Icon mark — black background, white mark |
+| `docs/assets/opendb-icon-light.svg` | Icon mark — white background, black mark |
+| `docs/assets/opendb-banner.svg` | Full banner — black background, logo + wordmark + tagline |
 
-### Option 2: Museum + Database Hybrid
-```
-  ╔═══════╗
-  ║  🏛️   ║  +  💾  =  OpenDB
-  ╚═══════╝
-```
-- Combine classical museum columns/architecture with modern database iconography
-- Represents "Muse" (museum) + "DB" (database)
-- Color scheme: Classical stone gray with modern tech blue
-
-### Option 3: Abstract Data Flow
-```
-📄 📊 📷
-  ↓  ↓  ↓
-  [ 🧠 ]  →  📝
-```
-- Various file icons flowing through an AI/processor into unified text
-- Emphasizes the transformation process
-- Color scheme: Multi-color inputs → single-color output
-
-### Option 4: Letter-based Logo
-```
-  M  ⟨DB⟩
-```
-- Stylized 'M' with database brackets/symbols
-- Minimalist, scalable design
-- Color scheme: Monochrome or dual-tone (purple/blue)
-
-## Technical Specifications
-
-### Banner Image
-- **Dimensions**: 1200x400px (3:1 ratio)
-- **Format**: PNG with transparency
-- **File size**: < 500KB
-- **Location**: `docs/assets/opendb-banner.png`
-
-### Favicon/Icon
-- **Dimensions**: 512x512px (square)
-- **Format**: PNG with transparency
-- **Variations**: 16x16, 32x32, 64x64, 128x128, 256x256, 512x512
-- **Location**: `docs/assets/opendb-icon.png`
-
-## Color Palette Suggestions
-
-### Option A: Tech Blue
-- Primary: `#1E3A8A` (Deep blue)
-- Secondary: `#3B82F6` (Bright blue)
-- Accent: `#60A5FA` (Light blue)
-- Text: `#1F2937` (Dark gray)
-
-### Option B: Museum Purple
-- Primary: `#6B21A8` (Deep purple)
-- Secondary: `#9333EA` (Vibrant purple)
-- Accent: `#C084FC` (Light purple)
-- Text: `#1F2937` (Dark gray)
-
-### Option C: Gradient Multi
-- Start: `#667EEA` (Blue-purple)
-- Middle: `#764BA2` (Purple)
-- End: `#F093FB` (Pink)
-- Text: `#1F2937` (Dark gray)
-
-## Tools for Creating the Logo
-
-### Free Tools
-1. **Figma** (https://figma.com) - Professional design tool, free tier
-2. **Canva** (https://canva.com) - Easy-to-use templates
-3. **Inkscape** (https://inkscape.org) - Open-source vector graphics
-4. **GIMP** (https://gimp.org) - Open-source image editor
-
-### AI Tools
-1. **DALL-E** (https://openai.com/dall-e-3) - AI image generation
-2. **Midjourney** (https://midjourney.com) - AI art generation
-3. **Stable Diffusion** - Open-source AI image generation
-
-### Prompt for AI Generation
+### Icon Anatomy
 
 ```
-Create a modern, professional logo for "OpenDB", a universal document parser
-for AI agents. The logo should represent:
-- Multiple file formats (PDF, DOCX, images) being unified
-- Database/archive concept
-- AI and automation
-- Clean, minimalist design suitable for tech documentation
-Style: Flat design, modern, tech-forward
-Colors: Blue gradient or purple/blue combination
-Format: Simple enough to work at small sizes, distinctive at large sizes
+┌──────────────────┐
+│                  │
+│    ┌──────┐      │
+│    │      │      │
+├────┤      │      │   ← horizontal bar breaks through the rounded square
+│    │      │      │
+│    └──────┘      │
+│                  │
+└──────────────────┘
 ```
 
-## Implementation Steps
+- **Outer shape**: Rounded square (`rx="17"` on 80×80 viewBox)
+- **Inner mark**: A "D" formed by a quadratic Bézier path
+- **Slit**: A horizontal rectangle at vertical center, extending past the left edge to `x=0`
+- **Concept**: The slit "opens" the container — Open + DB
 
-1. **Design the logo** using one of the tools above
-2. **Export in multiple formats**:
-   - Banner: 1200x400px PNG
-   - Icon: 512x512px PNG
-   - Vector: SVG for scalability
-3. **Save to repository**:
-   ```
-   docs/assets/
-   ├── opendb-banner.png
-   ├── opendb-icon.png
-   └── opendb-logo.svg
-   ```
-4. **Update README.md** with the banner image path
-5. **Add favicon** to any web interface
+### Sizes
 
-## Temporary Solution
+The icon is designed to work from 16px to any size. Minimum clear space = height of the slit.
 
-Until a custom logo is created, you can use:
-- Text-based banner with styled typography
-- Unicode symbols/emojis representing files and databases
-- Colored gradients with project name overlay
+## Color Palette
 
-## Need Help?
+Black and white only. No gradients, no accent colors on the logo itself.
 
-Consider:
-- Hiring a designer on Fiverr ($10-50 for simple logos)
-- Posting on r/logorequests (Reddit community for free logo requests)
-- Using logo generators like Looka or LogoMakr
+| Role | Hex | Usage |
+|------|-----|-------|
+| Primary | `#000000` | Icon background, banner background |
+| Mark | `#FFFFFF` | Inner "D" shape + slit |
+| Wordmark "open" | `#FFFFFF` | Banner text |
+| Wordmark "DB" | `#666666` | Banner text (dimmed) |
+| Tagline | `#666666` | Banner subtitle |
+
+### Extended palette (UI, not logo)
+
+From the brand kit (`opendb-brandkit.html`):
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| Slate 900 | `#0F172A` | Dark UI backgrounds |
+| Slate 800 | `#1E293B` | Hover / secondary |
+| Slate 600 | `#475569` | Body text |
+| Slate 100 | `#F1F5F9` | Light backgrounds |
+| Indigo | `#6366F1` | Accent / CTA |
+| Emerald | `#059669` | Success |
+| Cyan | `#0891B2` | Info / links |
+| Red | `#EF4444` | Error / danger |
+
+## Typography
+
+| Role | Font | Weight |
+|------|------|--------|
+| Display / Headings | DM Sans | 700 |
+| Body | DM Sans | 400 |
+| Code / Mono | JetBrains Mono | 400–500 |
+
+## Misuse
+
+Do not:
+- Rotate or skew the logo
+- Recolor the inner mark
+- Use low opacity or as watermark
+- Stretch or distort proportions
+- Add shadows or effects
+- Add outlines or borders
+
+## Full Brand Kit
+
+See `opendb-brandkit.html` in the repository root for interactive previews and downloadable assets.

@@ -109,6 +109,3 @@ def get_info() -> dict:
     return httpx.get(f"{OPENDB}/info").json()
 ```
 
-## OpenAI Function Calling Format
-
-See [tool-definitions.json](tool-definitions.json) for the full OpenAI-compatible tool schema.
