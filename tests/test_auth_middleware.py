@@ -9,15 +9,15 @@ from starlette.routing import Route
 from opendb_core.middleware.auth import ApiKeyMiddleware
 
 
-def _make_app(api_key: str = ""):
+def _make_app(api_key: str = "") -> None:
     """Create a minimal Starlette app with auth middleware."""
-    async def index(request):
+    async def index(request) -> None:
         return JSONResponse({"ok": True})
 
-    async def health(request):
+    async def health(request) -> None:
         return JSONResponse({"status": "healthy"})
 
-    async def data(request):
+    async def data(request) -> None:
         return JSONResponse({"data": "secret"})
 
     app = Starlette(routes=[
@@ -33,7 +33,7 @@ class TestAuthMiddlewareDisabled:
     """When no API key is configured, all requests pass through."""
 
     @pytest.mark.asyncio
-    async def test_no_key_allows_all(self):
+    async def test_no_key_allows_all(self) -> None:
         app = _make_app(api_key="")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -46,7 +46,7 @@ class TestAuthMiddlewareEnabled:
     """When API key is configured, requests must include it."""
 
     @pytest.mark.asyncio
-    async def test_missing_key_returns_401(self):
+    async def test_missing_key_returns_401(self) -> None:
         app = _make_app(api_key="my-secret-key")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -55,7 +55,7 @@ class TestAuthMiddlewareEnabled:
             assert "unauthorized" in r.json()["error"]
 
     @pytest.mark.asyncio
-    async def test_wrong_key_returns_401(self):
+    async def test_wrong_key_returns_401(self) -> None:
         app = _make_app(api_key="my-secret-key")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -63,7 +63,7 @@ class TestAuthMiddlewareEnabled:
             assert r.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_correct_key_passes(self):
+    async def test_correct_key_passes(self) -> None:
         app = _make_app(api_key="my-secret-key")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -72,7 +72,7 @@ class TestAuthMiddlewareEnabled:
             assert r.json()["data"] == "secret"
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_exempt(self):
+    async def test_health_endpoint_exempt(self) -> None:
         app = _make_app(api_key="my-secret-key")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -80,7 +80,7 @@ class TestAuthMiddlewareEnabled:
             assert r.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_root_endpoint_exempt(self):
+    async def test_root_endpoint_exempt(self) -> None:
         app = _make_app(api_key="my-secret-key")
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:

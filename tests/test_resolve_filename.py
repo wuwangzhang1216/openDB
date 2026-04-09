@@ -16,7 +16,7 @@ from opendb_core.storage import _backends, init_backend
 
 
 @pytest.fixture
-async def sqlite_backend(tmp_path: Path):
+async def sqlite_backend(tmp_path: Path) -> None:
     db_path = tmp_path / "resolve.db"
     await init_backend("sqlite", db_path=str(db_path))
     backend = _backends[str(db_path)]
@@ -41,21 +41,21 @@ async def _insert_indexed_file(backend, filename: str, source_path: str) -> str:
 
 
 class TestPathAwareResolution:
-    async def test_relative_path_resolves_via_source_path(self, sqlite_backend):
+    async def test_relative_path_resolves_via_source_path(self, sqlite_backend) -> None:
         expected = await _insert_indexed_file(
             sqlite_backend, "report.pdf", "/ws/docs/report.pdf"
         )
         got = await resolve_filename("docs/report.pdf")
         assert str(got) == expected
 
-    async def test_windows_separators_normalized(self, sqlite_backend):
+    async def test_windows_separators_normalized(self, sqlite_backend) -> None:
         expected = await _insert_indexed_file(
             sqlite_backend, "report.pdf", "/ws/docs/report.pdf"
         )
         got = await resolve_filename("docs\\report.pdf")
         assert str(got) == expected
 
-    async def test_ambiguous_path_raises(self, sqlite_backend):
+    async def test_ambiguous_path_raises(self, sqlite_backend) -> None:
         await _insert_indexed_file(
             sqlite_backend, "r.pdf", "/a/docs/r.pdf"
         )
@@ -66,7 +66,7 @@ class TestPathAwareResolution:
             await resolve_filename("docs/r.pdf")
         assert len(exc.value.candidates) == 2
 
-    async def test_boundary_enforced(self, sqlite_backend):
+    async def test_boundary_enforced(self, sqlite_backend) -> None:
         """'other-docs/r.pdf' must NOT match '/ws/docs/r.pdf'."""
         # Seed only one indexed file
         await _insert_indexed_file(
@@ -79,7 +79,7 @@ class TestPathAwareResolution:
         with pytest.raises((FNF, AmbiguousFilenameError)):
             await resolve_filename("other-dir/totally-different.xyz")
 
-    async def test_basename_input_skips_path_step(self, sqlite_backend):
+    async def test_basename_input_skips_path_step(self, sqlite_backend) -> None:
         """Input without separator uses step 1 (exact filename match)."""
         expected = await _insert_indexed_file(
             sqlite_backend, "report.pdf", "/ws/docs/report.pdf"
@@ -87,7 +87,7 @@ class TestPathAwareResolution:
         got = await resolve_filename("report.pdf")
         assert str(got) == expected
 
-    async def test_upload_without_source_path_falls_through(self, sqlite_backend):
+    async def test_upload_without_source_path_falls_through(self, sqlite_backend) -> None:
         """Uploaded files (no source_path) still resolve via fuzzy/ILIKE."""
         fid = str(uuid.uuid4())
         await sqlite_backend._db.execute(

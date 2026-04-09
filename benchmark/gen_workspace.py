@@ -1559,7 +1559,7 @@ def _fix_cross_references(content: str) -> str:
     return content
 
 
-def _parse_rst_lines(content: str):
+def _parse_rst_lines(content: str) -> None:
     """Parse RST-style text into (type, text) tuples.
     Types: 'h1', 'h2', 'text', 'blank'."""
     lines = content.split("\n")
@@ -1585,10 +1585,9 @@ def _parse_rst_lines(content: str):
     return result
 
 
-def _create_docx(filepath: str, content: str):
+def _create_docx(filepath: str, content: str) -> None:
     """Create a .docx file from text content."""
     from docx import Document
-    from docx.shared import Pt
 
     doc = Document()
     for kind, text in _parse_rst_lines(content):
@@ -1602,7 +1601,7 @@ def _create_docx(filepath: str, content: str):
     doc.save(filepath)
 
 
-def _create_pdf(filepath: str, content: str):
+def _create_pdf(filepath: str, content: str) -> None:
     """Create a .pdf file from text content using PyMuPDF."""
     import fitz
 
@@ -1636,7 +1635,7 @@ def _create_pdf(filepath: str, content: str):
     doc.close()
 
 
-def _create_pptx(filepath: str, content: str):
+def _create_pptx(filepath: str, content: str) -> None:
     """Create a .pptx file from text content."""
     from pptx import Presentation
     from pptx.util import Pt
@@ -1711,7 +1710,7 @@ def generate_files() -> list[dict]:
     return result
 
 
-async def upload_to_filedb(files: list[dict], base_url: str):
+async def upload_to_filedb(files: list[dict], base_url: str) -> None:
     """Upload all generated files to FileDB."""
     async with httpx.AsyncClient(base_url=base_url, timeout=60) as client:
         # Health check
@@ -1721,7 +1720,7 @@ async def upload_to_filedb(files: list[dict], base_url: str):
                 print(f"  WARNING: /health returned {resp.status_code}")
         except httpx.ConnectError:
             print(f"  ERROR: Cannot connect to {base_url}")
-            print(f"  Make sure FileDB is running.")
+            print("  Make sure FileDB is running.")
             sys.exit(1)
 
         for f in files:

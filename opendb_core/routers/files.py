@@ -30,7 +30,7 @@ async def upload_file(
     file: UploadFile = File(...),
     tags: str | None = Form(None),
     metadata: str | None = Form(None),
-):
+) -> dict:
     """Upload and ingest a file."""
     content = await file.read()
 
@@ -63,7 +63,7 @@ async def list_files(
     sort: str = Query("created_at:desc", description="Sort field:direction"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-):
+) -> dict:
     """List files with optional filters."""
     allowed_sorts = {"created_at", "filename", "file_size"}
     sort_parts = sort.split(":")
@@ -83,7 +83,7 @@ async def list_files(
 
 
 @router.get("/{file_id}")
-async def get_file(file_id: UUID):
+async def get_file(file_id: UUID) -> dict:
     """Get details of a single file."""
     backend = get_backend()
     record = await backend.get_file_by_id(str(file_id))
@@ -93,7 +93,7 @@ async def get_file(file_id: UUID):
 
 
 @router.delete("/{file_id}")
-async def delete_file(file_id: UUID):
+async def delete_file(file_id: UUID) -> dict:
     """Delete a file and all associated data."""
     backend = get_backend()
     file_path_str = await backend.delete_file(str(file_id))

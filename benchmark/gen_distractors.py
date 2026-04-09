@@ -288,7 +288,7 @@ def assemble_workspace(scale: str, pool: list[Path]) -> Path:
     return target
 
 
-async def main():
+async def main() -> None:
     parser = argparse.ArgumentParser(description="Generate benchmark distractors")
     parser.add_argument("--count", type=int, default=300, help="Pool size")
     parser.add_argument("--seed", type=int, default=42)

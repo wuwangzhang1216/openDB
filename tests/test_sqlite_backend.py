@@ -4,9 +4,6 @@ Tests the full SQLite backend lifecycle: init, ingest, search, memory,
 CJK search, and incremental re-indexing.
 """
 
-import asyncio
-import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -15,7 +12,7 @@ from opendb_core.parsers.base import Page, ParseResult
 
 
 @pytest.fixture
-async def backend(tmp_path):
+async def backend(tmp_path) -> None:
     """Create a temporary SQLite backend."""
     db_path = tmp_path / "test.db"
     b = SQLiteBackend(db_path=db_path)
@@ -30,7 +27,7 @@ def _make_parse_result(pages: list[Page]) -> ParseResult:
 
 class TestSQLiteIngestion:
     @pytest.mark.asyncio
-    async def test_ingest_and_read(self, backend):
+    async def test_ingest_and_read(self, backend) -> None:
         pages = [Page(page_number=1, section_title="Intro", text="Hello world")]
         result = await backend.persist_ingestion(
             file_id="aaaa-bbbb-cccc-dddd",
@@ -56,7 +53,7 @@ class TestSQLiteIngestion:
         assert "Hello world" in text["full_text"]
 
     @pytest.mark.asyncio
-    async def test_duplicate_detection(self, backend):
+    async def test_duplicate_detection(self, backend) -> None:
         pages = [Page(page_number=1, section_title=None, text="Content")]
         kwargs = dict(
             file_path="/tmp/dup.txt",
@@ -80,7 +77,7 @@ class TestSQLiteIngestion:
 
 class TestSQLiteSearch:
     @pytest.mark.asyncio
-    async def test_fts_search_english(self, backend):
+    async def test_fts_search_english(self, backend) -> None:
         pages = [Page(page_number=1, section_title=None, text="Revenue exceeded target of 450 million")]
         await backend.persist_ingestion(
             file_id="search-1",
@@ -103,7 +100,7 @@ class TestSQLiteSearch:
         assert "report.txt" in result["results"][0]["filename"]
 
     @pytest.mark.asyncio
-    async def test_fts_search_cjk(self, backend):
+    async def test_fts_search_cjk(self, backend) -> None:
         pages = [Page(page_number=1, section_title=None, text="今天天气很好，适合出去散步")]
         await backend.persist_ingestion(
             file_id="cjk-1",
@@ -126,7 +123,7 @@ class TestSQLiteSearch:
         assert "chinese.txt" in result["results"][0]["filename"]
 
     @pytest.mark.asyncio
-    async def test_search_no_results(self, backend):
+    async def test_search_no_results(self, backend) -> None:
         result = await backend.search_fts("nonexistent", {}, 10, 0)
         assert result["total"] == 0
         assert result["results"] == []
@@ -134,7 +131,7 @@ class TestSQLiteSearch:
 
 class TestSQLiteMemory:
     @pytest.mark.asyncio
-    async def test_store_and_recall(self, backend):
+    async def test_store_and_recall(self, backend) -> None:
         await backend.store_memory(
             memory_id="mem-1",
             content="User prefers dark mode",
@@ -154,7 +151,7 @@ class TestSQLiteMemory:
         assert "dark mode" in result["results"][0]["content"]
 
     @pytest.mark.asyncio
-    async def test_store_and_recall_cjk(self, backend):
+    async def test_store_and_recall_cjk(self, backend) -> None:
         await backend.store_memory(
             memory_id="mem-cjk-1",
             content="用户喜欢使用中文界面",
@@ -173,7 +170,7 @@ class TestSQLiteMemory:
         assert "中文" in result["results"][0]["content"]
 
     @pytest.mark.asyncio
-    async def test_pinned_recall(self, backend):
+    async def test_pinned_recall(self, backend) -> None:
         await backend.store_memory(
             memory_id="mem-pin",
             content="Critical system configuration",
@@ -194,7 +191,7 @@ class TestSQLiteMemory:
         assert result["results"][0]["pinned"] is True
 
     @pytest.mark.asyncio
-    async def test_forget_memory(self, backend):
+    async def test_forget_memory(self, backend) -> None:
         await backend.store_memory(
             memory_id="mem-forget",
             content="Temporary note",
@@ -210,7 +207,7 @@ class TestSQLiteMemory:
 
 class TestSQLiteFileCRUD:
     @pytest.mark.asyncio
-    async def test_list_and_delete(self, backend):
+    async def test_list_and_delete(self, backend) -> None:
         pages = [Page(page_number=1, section_title=None, text="Deletable")]
         await backend.persist_ingestion(
             file_id="del-1",
@@ -238,7 +235,7 @@ class TestSQLiteFileCRUD:
         assert file is None
 
     @pytest.mark.asyncio
-    async def test_workspace_stats(self, backend):
+    async def test_workspace_stats(self, backend) -> None:
         stats = await backend.get_workspace_stats()
         assert "by_status" in stats
         assert "memory" in stats

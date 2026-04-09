@@ -17,11 +17,11 @@ from starlette.responses import JSONResponse
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     """Require X-API-Key header when an API key is configured."""
 
-    def __init__(self, app, api_key: str = ""):
+    def __init__(self, app: object, api_key: str = "") -> None:
         super().__init__(app)
         self._api_key = api_key
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: object) -> JSONResponse:
         # No key configured → allow all
         if not self._api_key:
             return await call_next(request)

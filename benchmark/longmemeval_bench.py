@@ -22,14 +22,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import shutil
 import statistics
 import sys
 import tempfile
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # Add project root to path so we can import opendb_core directly
@@ -299,7 +298,7 @@ def print_report(results: list[QuestionResult], ks: list[int]) -> dict:
 # ============================================================
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="LongMemEval benchmark for OpenDB memory pipeline"
     )

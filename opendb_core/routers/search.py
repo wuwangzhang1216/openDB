@@ -49,7 +49,7 @@ class SearchResponse(BaseModel):
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest):
+async def search(request: SearchRequest) -> SearchResponse | dict:
     """Search across files. Supports full-text search (fts) and regex grep modes."""
     mode = request.mode
 

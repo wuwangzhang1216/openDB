@@ -63,7 +63,7 @@ _openrouter_client = AsyncOpenAI(
 _orig_create = _openrouter_client.chat.completions.create
 
 @functools.wraps(_orig_create)
-async def _patched_create(*args, **kwargs):
+async def _patched_create(*args, **kwargs) -> None:
     extra_body = kwargs.get("extra_body") or {}
     extra_body["provider"] = {"sort": "throughput"}
     kwargs["extra_body"] = extra_body
@@ -617,7 +617,7 @@ async def run_benchmark(tasks_to_run: list[dict], agents_to_run: list[str],
     results: list[TaskResult] = [None] * total  # pre-allocate to preserve order
 
     async def _run_job(idx: int, model_name: str, agent_name: str,
-                       agent: Agent, task: dict, run_id: int):
+                       agent: Agent, task: dict, run_id: int) -> None:
         async with sem:
             run_label = f"r{run_id}" if num_runs > 1 else ""
             tag = f"{model_name.split('/')[-1]}/{agent_name}/{task['id']}"
@@ -647,7 +647,7 @@ async def run_benchmark(tasks_to_run: list[dict], agents_to_run: list[str],
 # ============================================================
 
 
-def print_comparison_table(results: list[TaskResult]):
+def print_comparison_table(results: list[TaskResult]) -> None:
     """Print formatted comparison tables, one per model."""
     models = sorted(set(r.model_name for r in results))
     agents = []
@@ -759,7 +759,7 @@ def print_comparison_table(results: list[TaskResult]):
 # ============================================================
 
 
-def save_results(results: list[TaskResult]):
+def save_results(results: list[TaskResult]) -> None:
     """Save results in v2 JSON schema."""
     models = sorted(set(r.model_name for r in results))
     agents = []
@@ -830,7 +830,7 @@ def save_results(results: list[TaskResult]):
 # ============================================================
 
 
-def generate_report(results: list[TaskResult]):
+def generate_report(results: list[TaskResult]) -> None:
     """Auto-generate REPORT.md from benchmark results."""
     models = sorted(set(r.model_name for r in results))
     agents = []
@@ -852,7 +852,7 @@ def generate_report(results: list[TaskResult]):
         f"- **Agents**: {', '.join(agents)}",
         f"- **Runs per task**: {num_runs}",
         f"- **Tasks**: {len(task_ids)}",
-        f"- **Workspace**: 25 company documents (9 PDF, 8 DOCX, 3 PPTX, 5 CSV)\n",
+        "- **Workspace**: 25 company documents (9 PDF, 8 DOCX, 3 PPTX, 5 CSV)\n",
         "---\n",
     ]
 
@@ -979,7 +979,8 @@ def generate_report(results: list[TaskResult]):
                           and r.quality_scores and r.quality_scores.get("overall")]
                 if not scored:
                     continue
-                avg = lambda key: sum(r.quality_scores.get(key, 0) for r in scored) / len(scored)
+                def avg(key: str) -> float:
+                    return sum(r.quality_scores.get(key, 0) for r in scored) / len(scored)
                 lines.append(
                     f"| {model_short} | {agent_name} | "
                     f"{avg('accuracy'):.1f} | {avg('completeness'):.1f} | "
@@ -1103,7 +1104,7 @@ if __name__ == "__main__":
         WORKSPACE_DIR = scaled_dir
     elif SCALE != "small":
         print(f"ERROR: Scaled workspace not found: {scaled_dir}")
-        print(f"Run: python gen_distractors.py  (to build pool + assemble workspaces)")
+        print("Run: python gen_distractors.py  (to build pool + assemble workspaces)")
         sys.exit(1)
     print(f"Scale: {SCALE}  |  Workspace: {WORKSPACE_DIR}")
 
@@ -1119,7 +1120,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Run benchmark + optional judge in one event loop
-    async def _main():
+    async def _main() -> None:
         # Bootstrap RAG index if needed (cached per scale).
         if "rag" in args.agents:
             global _rag_index
@@ -1152,7 +1153,7 @@ if __name__ == "__main__":
             to_judge = [r for r in results if r.status == "success" and r.run_id == 1]
             sem = asyncio.Semaphore(args.concurrency)
 
-            async def _judge_one(r):
+            async def _judge_one(r) -> None:
                 async with sem:
                     tag = f"{r.model_name.split('/')[-1]}/{r.agent_name}/{r.task_id}"
                     r.quality_scores = await evaluate_answer_quality(

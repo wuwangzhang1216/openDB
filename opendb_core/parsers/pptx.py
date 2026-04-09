@@ -8,7 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches
 
 from opendb_core.parsers.base import Page, ParseResult
 from opendb_core.parsers.registry import register

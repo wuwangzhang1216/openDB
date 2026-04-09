@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -21,7 +22,7 @@ from opendb_core.storage import init_backend, close_backend
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -64,12 +65,12 @@ app.add_middleware(
 
 
 @app.exception_handler(FileDBNotFoundError)
-async def file_not_found_handler(request: Request, exc: FileDBNotFoundError):
+async def file_not_found_handler(request: Request, exc: FileDBNotFoundError) -> JSONResponse:
     return JSONResponse(status_code=404, content={"error": "file_not_found", "detail": str(exc)})
 
 
 @app.exception_handler(AmbiguousFilenameError)
-async def ambiguous_handler(request: Request, exc: AmbiguousFilenameError):
+async def ambiguous_handler(request: Request, exc: AmbiguousFilenameError) -> JSONResponse:
     return JSONResponse(
         status_code=409,
         content={"error": "ambiguous_filename", "candidates": exc.candidates},
@@ -77,7 +78,7 @@ async def ambiguous_handler(request: Request, exc: AmbiguousFilenameError):
 
 
 @app.exception_handler(ValueError)
-async def value_error_handler(request: Request, exc: ValueError):
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=400, content={"error": "bad_request", "detail": str(exc)})
 
 
@@ -92,5 +93,5 @@ app.include_router(memory_router)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     return {"service": "opendb", "version": "1.3.0"}

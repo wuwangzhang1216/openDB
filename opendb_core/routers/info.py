@@ -10,7 +10,7 @@ router = APIRouter(tags=["info"])
 
 
 @router.get("/info")
-async def info():
+async def info() -> dict:
     """Return workspace statistics: file counts by status/type, recent files."""
     backend = get_backend()
     return await backend.get_workspace_stats()

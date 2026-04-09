@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
@@ -51,7 +52,7 @@ def _is_code_file(filename: str) -> bool:
 # Lifespan
 # ---------------------------------------------------------------------------
 @asynccontextmanager
-async def app_lifespan():
+async def app_lifespan() -> AsyncIterator[dict]:
     yield {}
     await close_client()
 

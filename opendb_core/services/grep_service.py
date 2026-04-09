@@ -42,7 +42,6 @@ def _grep_files_sync(
     per_file_timeout: float = 5.0,
 ) -> dict:
     """Synchronous grep implementation, run in a thread."""
-    import signal
     import time
 
     root = Path(path)
@@ -83,12 +82,10 @@ def _grep_files_sync(
             continue
 
         lines = text.split("\n")
-        file_timed_out = False
         for i, line in enumerate(lines):
             # Check per-file timeout every 5000 lines
             if i % 5000 == 0 and time.monotonic() > deadline:
                 timed_out_files.append(rel)
-                file_timed_out = True
                 break
 
             if not pattern.search(line):

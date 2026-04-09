@@ -6,7 +6,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health():
+async def health() -> dict:
     pool = await get_pool()
     async with pool.acquire() as conn:
         result = await conn.fetchval("SELECT 1")

@@ -23,7 +23,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ class OpenDBClient:
     Supports both PostgreSQL (server mode) and SQLite (embedded mode).
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         database_url: str | None = None,
         file_storage_path: str = "./data",
@@ -45,7 +44,7 @@ class OpenDBClient:
         workspace_path: str | Path | None = None,
         workspace_root: str | Path | None = None,
         openrouter_api_key: str | None = None,
-    ):
+    ) -> None:
         """
         Args:
             database_url: PostgreSQL DSN. If provided (and ``workspace_path``
@@ -267,7 +266,6 @@ class OpenDBClient:
                 format_with_line_numbers,
                 grep_with_context,
                 extract_lines,
-                build_line_index,
             )
 
             # Parse the file using registered parsers

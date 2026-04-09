@@ -5,7 +5,6 @@ Splits on page breaks, extracts headings, tables, and metadata.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from docx import Document

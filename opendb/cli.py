@@ -37,7 +37,7 @@ app = typer.Typer(
 )
 
 
-def _run(coro):
+def _run(coro: object) -> object:
     """Run an async coroutine from a synchronous CLI context."""
     return asyncio.run(coro)
 
@@ -50,14 +50,14 @@ def _run(coro):
 def init(
     path: Path = typer.Argument(Path("."), help="Workspace root directory"),
     ocr: bool = typer.Option(True, help="Enable OCR for image/scanned PDFs"),
-):
+) -> None:
     """Initialise a OpenDB workspace (creates .opendb/ directory)."""
     from opendb_core.workspace import Workspace, WorkspaceConfig
 
     config = WorkspaceConfig(ocr_enabled=ocr)
     ws = Workspace(root=path.resolve(), config=config)
 
-    async def _init():
+    async def _init() -> None:
         await ws.init()
         await ws.close()
 
@@ -74,16 +74,14 @@ def index(
     path: Path = typer.Argument(Path("."), help="Directory to index"),
     workspace: Path = typer.Option(None, "--workspace", "-w", help="Workspace root (default: PATH)"),
     tags: str = typer.Option("", help="Comma-separated tags to apply"),
-):
+) -> None:
     """Index all supported files in a directory."""
     from opendb_core.workspace import Workspace
 
     ws_root = workspace or path
     ws = Workspace.open(ws_root)
 
-    parsed_tags = [t.strip() for t in tags.split(",") if t.strip()]
-
-    async def _index():
+    async def _index() -> dict:
         await ws.init()
         typer.echo(f"Indexing {path.resolve()} ...")
         result = await ws.index(path)
@@ -107,13 +105,13 @@ def search(
     workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
     limit: int = typer.Option(10, help="Maximum results"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Search indexed files."""
     from opendb_core.workspace import Workspace
 
     ws = Workspace.open(workspace)
 
-    async def _search():
+    async def _search() -> dict:
         await ws.init()
         result = await ws.search(query, limit=limit)
         await ws.close()
@@ -150,13 +148,13 @@ def read(
     grep: str = typer.Option(None, help="In-file search pattern"),
     numbered: bool = typer.Option(False, "--numbered", "-n", help="Show line numbers"),
     format: str = typer.Option(None, help="Output format: 'json' for spreadsheets"),
-):
+) -> None:
     """Read a file from the workspace."""
     from opendb_core.workspace import Workspace
 
     ws = Workspace.open(workspace)
 
-    async def _read():
+    async def _read() -> str:
         await ws.init()
         text = await ws.read(
             filename, numbered=numbered, pages=pages,
@@ -176,13 +174,13 @@ def read(
 @app.command(name="serve-mcp")
 def serve_mcp(
     workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
-):
+) -> None:
     """Start an MCP server in stdio transport (embedded mode, no PostgreSQL needed)."""
     from opendb_core.workspace import Workspace
 
     ws = Workspace.open(workspace)
 
-    async def _start():
+    async def _start() -> None:
         await ws.init()
         typer.echo(
             f"OpenDB MCP server starting (embedded, workspace: {ws.root})",
@@ -205,7 +203,7 @@ def serve(
     workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
     host: str = typer.Option("127.0.0.1", help="Bind host"),
     port: int = typer.Option(8000, help="Bind port"),
-):
+) -> None:
     """Start the HTTP server in embedded (SQLite) mode."""
     import uvicorn
     from opendb_core.config import settings
@@ -222,7 +220,7 @@ def serve(
 # Entry point
 # ---------------------------------------------------------------------------
 
-def main():
+def main() -> None:
     app()
 
 

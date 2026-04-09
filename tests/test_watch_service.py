@@ -12,8 +12,6 @@ import pytest
 from opendb_core.services.watch_service import (
     WatchEntry,
     _IngestHandler,
-    _watchers,
-    _watchers_lock,
     get_watch,
     list_watches,
     start_watch,
@@ -26,7 +24,7 @@ from opendb_core.services.watch_service import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _cleanup_watchers():
+def _cleanup_watchers() -> None:
     """Remove all watchers without joining observers (test cleanup)."""
     stop_all()
 
@@ -37,7 +35,7 @@ def _cleanup_watchers():
 
 
 class TestWatchEntry:
-    def test_defaults(self):
+    def test_defaults(self) -> None:
         from watchdog.observers import Observer
         obs = Observer()
         entry = WatchEntry(
@@ -61,19 +59,19 @@ class TestWatchEntry:
 
 
 class TestIngestHandlerDebounce:
-    def test_first_event_passes(self):
+    def test_first_event_passes(self) -> None:
         handler = _IngestHandler.__new__(_IngestHandler)
         handler._last_seen = {}
         handler._lock = __import__("threading").Lock()
         assert handler._should_process("/some/file.txt") is True
 
-    def test_rapid_duplicate_blocked(self):
+    def test_rapid_duplicate_blocked(self) -> None:
         handler = _IngestHandler.__new__(_IngestHandler)
         handler._last_seen = {"/file.txt": time.time()}
         handler._lock = __import__("threading").Lock()
         assert handler._should_process("/file.txt") is False
 
-    def test_after_debounce_window_passes(self):
+    def test_after_debounce_window_passes(self) -> None:
         handler = _IngestHandler.__new__(_IngestHandler)
         handler._last_seen = {"/file.txt": time.time() - 5.0}
         handler._lock = __import__("threading").Lock()
@@ -87,11 +85,11 @@ class TestIngestHandlerDebounce:
 
 class TestWatchLifecycle:
     @pytest.fixture(autouse=True)
-    def cleanup(self):
+    def cleanup(self) -> None:
         yield
         _cleanup_watchers()
 
-    def test_start_and_list(self, tmp_path: Path):
+    def test_start_and_list(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             watch_id = start_watch(tmp_path, tags=["test"], loop=loop)
@@ -107,7 +105,7 @@ class TestWatchLifecycle:
         finally:
             loop.close()
 
-    def test_get_watch(self, tmp_path: Path):
+    def test_get_watch(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             watch_id = start_watch(tmp_path, loop=loop)
@@ -118,10 +116,10 @@ class TestWatchLifecycle:
         finally:
             loop.close()
 
-    def test_get_nonexistent_returns_none(self):
+    def test_get_nonexistent_returns_none(self) -> None:
         assert get_watch("nonexistent") is None
 
-    def test_stop_watch(self, tmp_path: Path):
+    def test_stop_watch(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             watch_id = start_watch(tmp_path, loop=loop)
@@ -131,10 +129,10 @@ class TestWatchLifecycle:
         finally:
             loop.close()
 
-    def test_stop_nonexistent_returns_false(self):
+    def test_stop_nonexistent_returns_false(self) -> None:
         assert stop_watch("nonexistent") is False
 
-    def test_duplicate_watch_returns_same_id(self, tmp_path: Path):
+    def test_duplicate_watch_returns_same_id(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             id1 = start_watch(tmp_path, loop=loop)
@@ -144,7 +142,7 @@ class TestWatchLifecycle:
         finally:
             loop.close()
 
-    def test_stop_all(self, tmp_path: Path):
+    def test_stop_all(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             d1 = tmp_path / "a"
@@ -160,7 +158,7 @@ class TestWatchLifecycle:
         finally:
             loop.close()
 
-    def test_max_watchers_enforced(self, tmp_path: Path):
+    def test_max_watchers_enforced(self, tmp_path: Path) -> None:
         loop = asyncio.new_event_loop()
         try:
             with patch("opendb_core.services.watch_service.settings") as mock_settings:

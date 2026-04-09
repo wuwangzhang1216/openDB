@@ -18,7 +18,7 @@ _SPREADSHEET_MIMES = {
 
 
 class AmbiguousFilenameError(Exception):
-    def __init__(self, candidates: list[dict]):
+    def __init__(self, candidates: list[dict]) -> None:
         self.candidates = candidates
         super().__init__(f"Ambiguous filename, {len(candidates)} candidates found")
 

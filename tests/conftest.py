@@ -5,7 +5,7 @@ from opendb_core.main import app
 
 
 @pytest.fixture
-async def client():
+async def client() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

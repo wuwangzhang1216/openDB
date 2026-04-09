@@ -658,6 +658,5 @@ class PostgresBackend(PgMemoryMixin):
 
 from opendb_core.storage.shared import (  # noqa: E402
     add_pg_filters as _add_pg_filters,
-    pg_memory_row as _pg_memory_row,
     pg_file_row as _pg_file_row,
 )

@@ -5,7 +5,7 @@ from opendb_core import database
 
 class TestGetPool:
     @pytest.mark.asyncio
-    async def test_raises_when_not_initialized(self):
+    async def test_raises_when_not_initialized(self) -> None:
         """get_pool() must raise RuntimeError when pool is None."""
         original = database.pool
         database.pool = None
@@ -18,7 +18,7 @@ class TestGetPool:
 
 class TestClosePool:
     @pytest.mark.asyncio
-    async def test_close_sets_none(self):
+    async def test_close_sets_none(self) -> None:
         """close_pool() sets the global pool to None."""
         original = database.pool
         database.pool = None  # Simulate already-closed state

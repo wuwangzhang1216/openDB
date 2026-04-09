@@ -114,7 +114,7 @@ async def index_directory(
     checksum_map: dict[Path, str] = {}
     sem = asyncio.Semaphore(max_concurrent)
 
-    async def _checksum_worker(path: Path):
+    async def _checksum_worker(path: Path) -> None:
         async with sem:
             checksum_map[path] = await asyncio.to_thread(compute_sha256, path)
 

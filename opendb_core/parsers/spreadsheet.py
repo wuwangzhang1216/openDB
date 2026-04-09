@@ -19,7 +19,7 @@ ROWS_PER_PAGE = 100
 HEADER_REPEAT_INTERVAL = 50
 
 
-def _serialize_cell(value):
+def _serialize_cell(value: object) -> str | float | int | bool | None:
     """Serialize a cell value to a JSON-safe type."""
     if value is None:
         return None

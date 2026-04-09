@@ -17,7 +17,7 @@ _MAX_RESULTS = 500
 async def glob_files(
     pattern: str = Query(..., description="Glob pattern, e.g. '**/*.py', 'src/**/*.ts'"),
     path: str | None = Query(None, description="Root directory to search in"),
-):
+) -> dict | JSONResponse:
     """Find files matching a glob pattern. Returns paths sorted by modification time (newest first)."""
     if not path:
         return JSONResponse(

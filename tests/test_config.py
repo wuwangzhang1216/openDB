@@ -6,54 +6,54 @@ from opendb_core.config import Settings
 
 
 class TestSettingsDefaults:
-    def test_default_backend(self):
+    def test_default_backend(self) -> None:
         s = Settings()
         assert s.backend == "postgres"
 
-    def test_default_max_file_size(self):
+    def test_default_max_file_size(self) -> None:
         s = Settings()
         assert s.max_file_size == 100 * 1024 * 1024  # 100 MB
 
-    def test_default_port(self):
+    def test_default_port(self) -> None:
         s = Settings()
         assert s.port == 8000
 
-    def test_default_host(self):
+    def test_default_host(self) -> None:
         s = Settings()
         assert s.host == "0.0.0.0"
 
-    def test_default_ocr_enabled(self):
+    def test_default_ocr_enabled(self) -> None:
         s = Settings()
         assert s.ocr_enabled is True
 
-    def test_default_ocr_languages(self):
+    def test_default_ocr_languages(self) -> None:
         s = Settings()
         assert "eng" in s.ocr_languages
 
-    def test_default_memory_decay(self):
+    def test_default_memory_decay(self) -> None:
         s = Settings()
         assert s.memory_decay_halflife_days == 30.0
 
-    def test_default_auth_key_empty(self):
+    def test_default_auth_key_empty(self) -> None:
         s = Settings()
         assert s.auth_api_key == ""
 
-    def test_default_watch_max(self):
+    def test_default_watch_max(self) -> None:
         s = Settings()
         assert s.watch_max_watchers == 10
 
-    def test_default_index_max_concurrent(self):
+    def test_default_index_max_concurrent(self) -> None:
         s = Settings()
         assert s.index_max_concurrent == 4
 
-    def test_default_cors_origins(self):
+    def test_default_cors_origins(self) -> None:
         s = Settings()
         assert "*" in s.cors_origins
 
-    def test_file_storage_path_is_path(self):
+    def test_file_storage_path_is_path(self) -> None:
         s = Settings()
         assert isinstance(s.file_storage_path, Path)
 
-    def test_opendb_dir_is_path(self):
+    def test_opendb_dir_is_path(self) -> None:
         s = Settings()
         assert isinstance(s.opendb_dir, Path)

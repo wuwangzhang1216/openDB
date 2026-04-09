@@ -7,7 +7,7 @@ in ingest_service.py, including error paths and duplicate handling.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ from opendb_core.config import settings
 from opendb_core.services.ingest_service import ingest_file
 
 
-def _make_mock_backend(check_duplicate_return=None):
+def _make_mock_backend(check_duplicate_return=None) -> None:
     """Create a mock StorageBackend for unit testing."""
     mock = AsyncMock()
     mock.check_duplicate = AsyncMock(return_value=check_duplicate_return)
@@ -30,7 +30,7 @@ def _make_mock_backend(check_duplicate_return=None):
 
 class TestIngestFileValidation:
     @pytest.mark.asyncio
-    async def test_rejects_oversized_file(self):
+    async def test_rejects_oversized_file(self) -> None:
         """Files exceeding max_file_size are rejected immediately."""
         content = b"x" * (settings.max_file_size + 1)
         with pytest.raises(ValueError, match="exceeds max"):
@@ -39,7 +39,7 @@ class TestIngestFileValidation:
 
 class TestIngestFileDuplicate:
     @pytest.mark.asyncio
-    async def test_duplicate_detected_by_checksum(self, tmp_path: Path):
+    async def test_duplicate_detected_by_checksum(self, tmp_path: Path) -> None:
         """When a file with matching checksum exists, return duplicate status."""
         content = b"hello duplicate world"
         duplicate_record = {
@@ -65,7 +65,7 @@ class TestIngestFileDuplicate:
 
 class TestIngestFileCleanup:
     @pytest.mark.asyncio
-    async def test_cleans_up_on_parse_failure(self, tmp_path: Path):
+    async def test_cleans_up_on_parse_failure(self, tmp_path: Path) -> None:
         """When parsing fails, file directory is cleaned up."""
         content = b"some content"
         mock_backend = _make_mock_backend(check_duplicate_return=None)

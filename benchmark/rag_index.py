@@ -31,9 +31,9 @@ except ImportError:
     # Fallback: approximate 1 token ≈ 4 chars
     def _count_tokens(text: str) -> int:
         return max(1, len(text) // 4)
-    def _decode_tokens(ids):
+    def _decode_tokens(ids) -> None:
         return "".join(ids)
-    def _encode_tokens(text: str):
+    def _encode_tokens(text: str) -> None:
         # 400-char windows ≈ 100 tokens
         return [text[i:i+4] for i in range(0, len(text), 4)]
 
@@ -66,7 +66,7 @@ def chunk_text(text: str, chunk_tokens: int = DEFAULT_CHUNK_TOKENS,
 
 class RAGIndex:
     def __init__(self, embed_model: str = "openai/text-embedding-3-small",
-                 api_base: str | None = None, api_key: str | None = None):
+                 api_base: str | None = None, api_key: str | None = None) -> None:
         self.embed_model = embed_model
         # Default to OpenRouter so we reuse the same key as the benchmark.
         self._client = AsyncOpenAI(

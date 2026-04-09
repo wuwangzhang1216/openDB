@@ -69,7 +69,7 @@ _DEBOUNCE_SECONDS = 2.0
 class _IngestHandler(FileSystemEventHandler):
     """Watchdog handler that puts file paths onto an asyncio queue."""
 
-    def __init__(self, watch_id: str, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
+    def __init__(self, watch_id: str, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
         super().__init__()
         self.watch_id = watch_id
         self.queue = queue
@@ -87,7 +87,7 @@ class _IngestHandler(FileSystemEventHandler):
             self._last_seen[path_str] = now
             return True
 
-    def _enqueue(self, event: FileSystemEvent):
+    def _enqueue(self, event: FileSystemEvent) -> None:
         src = event.src_path
         path = Path(src)
 
@@ -116,10 +116,10 @@ class _IngestHandler(FileSystemEventHandler):
         # Thread-safe put onto the asyncio queue
         self.loop.call_soon_threadsafe(self.queue.put_nowait, path)
 
-    def on_created(self, event: FileSystemEvent):
+    def on_created(self, event: FileSystemEvent) -> None:
         self._enqueue(event)
 
-    def on_modified(self, event: FileSystemEvent):
+    def on_modified(self, event: FileSystemEvent) -> None:
         self._enqueue(event)
 
 
@@ -127,7 +127,7 @@ class _IngestHandler(FileSystemEventHandler):
 # Background consumer: pulls paths from queue and ingests them
 # ---------------------------------------------------------------------------
 
-async def _consume_queue(watch_id: str, queue: asyncio.Queue):
+async def _consume_queue(watch_id: str, queue: asyncio.Queue) -> None:
     """Long-running task that ingests files as they appear on the queue."""
     import magic as _magic
     from opendb_core.services.ingest_service import ingest_local_file
@@ -262,7 +262,7 @@ def stop_watch(watch_id: str) -> bool:
     return True
 
 
-def stop_all():
+def stop_all() -> None:
     """Stop all active watchers. Called during shutdown."""
     with _watchers_lock:
         ids = list(_watchers.keys())

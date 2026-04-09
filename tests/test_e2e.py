@@ -4,15 +4,12 @@ Tests the complete flow: init workspace -> index files -> search -> read -> memo
 Uses SQLite embedded mode (no PostgreSQL required).
 """
 
-import asyncio
-import tempfile
-from pathlib import Path
 
 import pytest
 
 
 @pytest.fixture
-def sample_dir(tmp_path):
+def sample_dir(tmp_path) -> None:
     """Create a directory with sample text files."""
     (tmp_path / "report.txt").write_text(
         "Quarterly Revenue Report\n\n"
@@ -39,7 +36,7 @@ def sample_dir(tmp_path):
 
 
 @pytest.fixture
-async def workspace(tmp_path):
+async def workspace(tmp_path) -> None:
     """Create a temporary workspace using the Workspace class."""
     from opendb_core.workspace import Workspace
 
@@ -51,7 +48,7 @@ async def workspace(tmp_path):
 
 class TestE2EPipeline:
     @pytest.mark.asyncio
-    async def test_index_search_read(self, workspace, sample_dir):
+    async def test_index_search_read(self, workspace, sample_dir) -> None:
         """Full pipeline: index -> search -> read."""
         # Index the sample directory
         result = await workspace.index(str(sample_dir))
@@ -68,7 +65,7 @@ class TestE2EPipeline:
         assert "450M" in read
 
     @pytest.mark.asyncio
-    async def test_cjk_search(self, workspace, sample_dir):
+    async def test_cjk_search(self, workspace, sample_dir) -> None:
         """CJK content can be indexed and searched."""
         await workspace.index(str(sample_dir))
 
@@ -78,7 +75,7 @@ class TestE2EPipeline:
         assert "chinese.txt" in found_files
 
     @pytest.mark.asyncio
-    async def test_memory_lifecycle(self, workspace):
+    async def test_memory_lifecycle(self, workspace) -> None:
         """Store, recall, and forget memories."""
         # Store
         mem = await workspace.memory_store(
@@ -101,7 +98,7 @@ class TestE2EPipeline:
         assert results["total"] == 0
 
     @pytest.mark.asyncio
-    async def test_memory_cjk(self, workspace):
+    async def test_memory_cjk(self, workspace) -> None:
         """CJK memory store and recall."""
         await workspace.memory_store(
             "用户偏好使用深色主题",
@@ -112,7 +109,7 @@ class TestE2EPipeline:
         assert "深色" in results["results"][0]["content"]
 
     @pytest.mark.asyncio
-    async def test_incremental_reindex(self, workspace, sample_dir):
+    async def test_incremental_reindex(self, workspace, sample_dir) -> None:
         """Re-indexing skips unchanged files."""
         result1 = await workspace.index(str(sample_dir))
         ingested1 = result1["ingested"]
@@ -124,40 +121,40 @@ class TestE2EPipeline:
 
 
 class TestSharedHelpers:
-    def test_build_highlight(self):
+    def test_build_highlight(self) -> None:
         from opendb_core.storage.shared import build_highlight
 
         text = "The quick brown fox jumps over the lazy dog near the river"
         hl = build_highlight(text, "fox")
         assert "fox" in hl
 
-    def test_build_highlight_no_match(self):
+    def test_build_highlight_no_match(self) -> None:
         from opendb_core.storage.shared import build_highlight
 
         text = "Hello world"
         hl = build_highlight(text, "nonexistent")
         assert hl == text[:150]
 
-    def test_escape_fts5_basic(self):
+    def test_escape_fts5_basic(self) -> None:
         from opendb_core.storage.shared import escape_fts5
 
         result = escape_fts5("hello world")
         assert '"hello"' in result
         assert '"world"' in result
 
-    def test_escape_fts5_or_mode(self):
+    def test_escape_fts5_or_mode(self) -> None:
         from opendb_core.storage.shared import escape_fts5
 
         result = escape_fts5("running quickly", use_or=True)
         assert "OR" in result
 
-    def test_tokenize_for_fts_latin(self):
+    def test_tokenize_for_fts_latin(self) -> None:
         from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("hello world")
         assert result == "hello world"
 
-    def test_tokenize_for_fts_cjk(self):
+    def test_tokenize_for_fts_cjk(self) -> None:
         from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("今天天气很好")
@@ -165,7 +162,7 @@ class TestSharedHelpers:
         assert " " in result
         assert "天气" in result
 
-    def test_tokenize_for_fts_hyphen(self):
+    def test_tokenize_for_fts_hyphen(self) -> None:
         from opendb_core.utils.tokenizer import tokenize_for_fts
 
         result = tokenize_for_fts("gardening-related tips")

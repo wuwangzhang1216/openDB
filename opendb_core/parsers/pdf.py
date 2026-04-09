@@ -114,7 +114,6 @@ class PdfParser:
 
                 # Add header separator after first row
                 if len(formatted_rows) > 1:
-                    header = formatted_rows[0]
                     separator = "|" + "|".join(
                         "-" * (len(c) + 2) for c in rows[0]
                     ) + "|"

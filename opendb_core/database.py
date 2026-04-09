@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 pool: asyncpg.Pool | None = None
 
 
-async def init_pool():
+async def init_pool() -> None:
     global pool
     last_err = None
     for attempt in range(3):
@@ -33,7 +33,7 @@ async def init_pool():
     raise RuntimeError(f"Failed to connect to database after 3 attempts: {last_err}")
 
 
-async def close_pool():
+async def close_pool() -> None:
     global pool
     if pool:
         await pool.close()

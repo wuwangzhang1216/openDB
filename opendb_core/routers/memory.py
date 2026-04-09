@@ -47,7 +47,7 @@ class MemoryForgetRequest(BaseModel):
 # ------------------------------------------------------------------
 
 @router.post("/memory")
-async def store(request: MemoryStoreRequest):
+async def store(request: MemoryStoreRequest) -> dict:
     """Store a new memory entry."""
     return await store_memory(
         content=request.content,
@@ -59,7 +59,7 @@ async def store(request: MemoryStoreRequest):
 
 
 @router.post("/memory/recall")
-async def recall(request: MemoryRecallRequest):
+async def recall(request: MemoryRecallRequest) -> dict:
     """Search and recall stored memories."""
     return await recall_memories(
         query=request.query,
@@ -72,7 +72,7 @@ async def recall(request: MemoryRecallRequest):
 
 
 @router.post("/memory/forget")
-async def forget(request: MemoryForgetRequest):
+async def forget(request: MemoryForgetRequest) -> dict:
     """Delete memories by ID or by search query."""
     return await forget_memory(
         memory_id=request.memory_id,
@@ -87,7 +87,7 @@ async def list_all(
     tags: str | None = None,
     limit: int = 20,
     offset: int = 0,
-):
+) -> dict:
     """List memories with optional filters."""
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     return await list_memories(

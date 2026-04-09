@@ -619,7 +619,6 @@ class SQLiteBackend(SQLiteMemoryMixin):
             conditions.append("f.filename LIKE ?")
 
         where_clause = " AND ".join(conditions)
-        n = len(params)
 
         query = f"""
             SELECT f.id, f.filename, f.mime_type, f.file_size,

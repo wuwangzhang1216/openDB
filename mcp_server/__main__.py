@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="OpenDB MCP Server")
     parser.add_argument(
         "--transport",

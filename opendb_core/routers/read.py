@@ -26,7 +26,7 @@ async def read_file(
     toc: bool = Query(False, description="Return table of contents"),
     format: str | None = Query(None, description="Output format: 'json' for structured data (spreadsheets only)"),
     numbered: bool = Query(False, description="Add line numbers to output (cat -n style)"),
-):
+) -> JSONResponse | PlainTextResponse:
     """Read a file as plain text. Like cat but for any file format."""
     try:
         file_id = await resolve_filename(filename)

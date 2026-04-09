@@ -3,7 +3,6 @@
 import os
 from unittest.mock import patch
 
-import pytest
 
 from opendb_core.utils.tokenizer import (
     tokenize_for_fts,
@@ -21,33 +20,33 @@ from opendb_core.utils.tokenizer import (
 # ---------------------------------------------------------------------------
 
 class TestPatterns:
-    def test_cjk_regex_matches_chinese(self):
+    def test_cjk_regex_matches_chinese(self) -> None:
         assert _CJK_RE.search("你好") is not None
 
-    def test_cjk_regex_matches_japanese_hiragana(self):
+    def test_cjk_regex_matches_japanese_hiragana(self) -> None:
         assert _CJK_RE.search("こんにちは") is not None
 
-    def test_cjk_regex_matches_japanese_katakana(self):
+    def test_cjk_regex_matches_japanese_katakana(self) -> None:
         assert _CJK_RE.search("カタカナ") is not None
 
-    def test_cjk_regex_matches_korean(self):
+    def test_cjk_regex_matches_korean(self) -> None:
         assert _CJK_RE.search("한국어") is not None
 
-    def test_cjk_regex_no_match_latin(self):
+    def test_cjk_regex_no_match_latin(self) -> None:
         assert _CJK_RE.search("hello world") is None
 
-    def test_thai_regex_matches(self):
+    def test_thai_regex_matches(self) -> None:
         assert _THAI_RE.search("สวัสดี") is not None
 
-    def test_thai_regex_no_match_latin(self):
+    def test_thai_regex_no_match_latin(self) -> None:
         assert _THAI_RE.search("hello") is None
 
-    def test_hyphen_regex_matches(self):
+    def test_hyphen_regex_matches(self) -> None:
         m = _HYPHEN_RE.search("gardening-related tips")
         assert m is not None
         assert m.group(0) == "gardening-related"
 
-    def test_hyphen_regex_multi_hyphen(self):
+    def test_hyphen_regex_multi_hyphen(self) -> None:
         m = _HYPHEN_RE.search("state-of-the-art model")
         assert m is not None
         assert m.group(0) == "state-of-the-art"
@@ -58,18 +57,18 @@ class TestPatterns:
 # ---------------------------------------------------------------------------
 
 class TestExpandHyphens:
-    def test_single_hyphen(self):
+    def test_single_hyphen(self) -> None:
         result = _expand_hyphens("gardening-related tips")
         assert "gardening-related" in result
         assert "gardening" in result
         assert "related" in result
         assert "tips" in result
 
-    def test_no_hyphens(self):
+    def test_no_hyphens(self) -> None:
         text = "hello world"
         assert _expand_hyphens(text) == text
 
-    def test_multi_hyphen(self):
+    def test_multi_hyphen(self) -> None:
         result = _expand_hyphens("state-of-the-art")
         assert "state-of-the-art" in result
         assert "state" in result
@@ -81,38 +80,38 @@ class TestExpandHyphens:
 # ---------------------------------------------------------------------------
 
 class TestTokenizeForFts:
-    def test_latin_text_unchanged(self):
+    def test_latin_text_unchanged(self) -> None:
         text = "hello world"
         assert tokenize_for_fts(text) == text
 
-    def test_chinese_text_segmented(self):
+    def test_chinese_text_segmented(self) -> None:
         result = tokenize_for_fts("今天天气很好")
         assert " " in result
         assert "天气" in result
 
-    def test_mixed_cjk_latin(self):
+    def test_mixed_cjk_latin(self) -> None:
         result = tokenize_for_fts("hello 你好 world")
         assert "hello" in result
         assert " " in result
 
-    def test_hyphenated_words_expanded(self):
+    def test_hyphenated_words_expanded(self) -> None:
         result = tokenize_for_fts("gardening-related tips")
         assert "gardening" in result
         assert "related" in result
         assert "gardening-related" in result
 
-    def test_empty_string(self):
+    def test_empty_string(self) -> None:
         assert tokenize_for_fts("") == ""
 
-    def test_pure_numbers(self):
+    def test_pure_numbers(self) -> None:
         result = tokenize_for_fts("12345")
         assert "12345" in result
 
-    def test_japanese_segmented(self):
+    def test_japanese_segmented(self) -> None:
         result = tokenize_for_fts("東京は日本の首都です")
         assert " " in result
 
-    def test_korean_segmented(self):
+    def test_korean_segmented(self) -> None:
         result = tokenize_for_fts("서울은 대한민국의 수도입니다")
         # jieba may not segment Korean well, but should not crash
         assert isinstance(result, str)
@@ -123,7 +122,7 @@ class TestTokenizeForFts:
 # ---------------------------------------------------------------------------
 
 class TestRegisterTokenizer:
-    def test_register_custom(self):
+    def test_register_custom(self) -> None:
         def my_tokenizer(text: str) -> str:
             return text.upper()
 
@@ -131,7 +130,7 @@ class TestRegisterTokenizer:
         assert "test_upper" in _tokenizers
         assert _tokenizers["test_upper"]("hello") == "HELLO"
 
-    def test_register_overrides_existing(self):
+    def test_register_overrides_existing(self) -> None:
         original = _tokenizers.get("jieba")
         try:
             register_tokenizer("jieba", lambda t: "CUSTOM")
@@ -141,7 +140,7 @@ class TestRegisterTokenizer:
             if original:
                 _tokenizers["jieba"] = original
 
-    def test_custom_tokenizer_used_via_env(self):
+    def test_custom_tokenizer_used_via_env(self) -> None:
         register_tokenizer("test_custom", lambda t: "tokenized:" + t)
         try:
             with patch.dict(os.environ, {"FILEDB_TOKENIZER": "test_custom"}):

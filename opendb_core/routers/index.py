@@ -27,7 +27,7 @@ async def index_directory_endpoint(
     tags: str | None = Query(None, description="JSON array of tags to apply to all files"),
     metadata: str | None = Query(None, description="JSON object of metadata to apply"),
     max_concurrent: int = Query(4, ge=1, le=16, description="Max concurrent ingestion workers"),
-):
+) -> dict:
     """Recursively scan a local directory, ingest all supported files,
     and start watching for future changes."""
     dir_path = Path(path).resolve()
@@ -60,13 +60,13 @@ async def index_directory_endpoint(
 
 
 @router.get("/watch")
-async def list_watches_endpoint():
+async def list_watches_endpoint() -> dict:
     """List all active directory watchers."""
     return {"watches": list_watches()}
 
 
 @router.get("/watch/{watch_id}")
-async def get_watch_endpoint(watch_id: str):
+async def get_watch_endpoint(watch_id: str) -> dict:
     """Get details of a single watcher."""
     info = get_watch(watch_id)
     if info is None:
@@ -75,7 +75,7 @@ async def get_watch_endpoint(watch_id: str):
 
 
 @router.delete("/watch/{watch_id}")
-async def stop_watch_endpoint(watch_id: str):
+async def stop_watch_endpoint(watch_id: str) -> dict:
     """Stop a directory watcher."""
     removed = stop_watch(watch_id)
     if not removed:
