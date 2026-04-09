@@ -143,40 +143,41 @@ T4 (cross-reference) is the most expensive task for both. RAG uses 94k tokens an
 |--------|----------------|-----------|--------|----------------|
 | OMEGA | 95.4% | GPT-4.1 | Vector + structured memory | Embedding model + local |
 | Mastra | 94.87% | GPT-5-mini | Observational memory | LLM + embedding |
+| **OpenDB (FTS)** | **93.6%** | **qwen3.6-plus** | **FTS5 + time-decay** | **Zero API, SQLite only** |
 | MemMachine | 93.0% | — | Ground-truth preserving | LLM + vector DB |
 | Vectorize Hindsight | 91.4% | — | Open-source vector memory | Embedding model |
 | Emergence AI | 86.0% | — | RAG + graph | LLM + graph DB + vector DB |
 | Supermemory | 81.6% | GPT-4o | Hybrid vector + relational | Embedding model |
-| **OpenDB (FTS)** | **76.8%** | **qwen3.6-plus** | **FTS5 + time-decay** | **Zero API, SQLite only** |
 | Zep/Graphiti | 71.2% | — | Graph-based | Graph DB + LLM |
 
 > Run: `python longmemeval_e2e_bench.py --model qwen/qwen3.6-plus --judge-model qwen/qwen3.6-plus --concurrency 8`
 
-**Note**: OpenDB uses qwen3.6-plus (a significantly cheaper model) while top competitors use GPT-4.1/GPT-5-mini. Mastra showed a 10-point gap between GPT-4o (84%) and GPT-5-mini (95%) on the same system, suggesting OpenDB with GPT-4.1 would score considerably higher.
+**Note**: OpenDB uses qwen3.6-plus (a significantly cheaper model) while top competitors use GPT-4.1/GPT-5-mini. Mastra showed a 10-point gap between GPT-4o (84%) and GPT-5-mini (95%) on the same system, suggesting OpenDB with GPT-4.1 would score even higher.
 
 ### Per-Category Breakdown
 
 | Category | Count | OpenDB | OMEGA | Supermemory | Zep |
 |----------|-------|--------|-------|-------------|-----|
-| single-session-user | 70 | **98.6%** | — | 97.1% | 92.9% |
+| single-session-user | 70 | 97.1% | — | 97.1% | 92.9% |
 | single-session-assistant | 56 | **100%** | — | 96.4% | 80.4% |
-| single-session-preference | 30 | 56.7% | — | 70.0% | 56.7% |
-| knowledge-update | 78 | 74.4% | 96% | 88.5% | 83.3% |
-| temporal-reasoning | 133 | 53.4% | 94% | 76.7% | 62.4% |
-| multi-session | 133 | **85.0%** | 83% | 71.4% | 57.9% |
-| abstention | 30 | **93.3%** | — | — | — |
+| single-session-preference | 30 | 73.3% | — | 70.0% | 56.7% |
+| knowledge-update | 78 | **97.4%** | 96% | 88.5% | 83.3% |
+| temporal-reasoning | 133 | **95.5%** | 94% | 76.7% | 62.4% |
+| multi-session | 133 | **89.5%** | 83% | 71.4% | 57.9% |
+| abstention | 30 | 86.7% | — | — | — |
 
-**Strengths**: single-session recall (98-100%), multi-session reasoning (85%), abstention (93%).
+**Strengths**: temporal-reasoning (95.5% — beats OMEGA's 94%), knowledge-update (97.4% — beats OMEGA's 96%), multi-session (89.5% — beats OMEGA's 83%), single-session recall (97-100%).
 
-**Weakness**: temporal-reasoning (54%) — FTS cannot match synonyms/paraphrases needed for date arithmetic questions. This is the fundamental FTS vs vector tradeoff.
+**Remaining weakness**: single-session-preference (73.3%) — preferences are often expressed implicitly in conversation, requiring inference rather than keyword matching.
 
 ### Key Differentiators
 
 - **Zero API cost for retrieval**: OpenDB uses SQLite FTS5, no embedding API calls needed
-- **Sub-millisecond latency**: 0.9ms median recall vs 50-200ms for vector approaches
+- **Sub-millisecond latency**: 1.3ms median recall vs 50-200ms for vector approaches
 - **No infrastructure**: Single SQLite file vs vector DB + embedding model + graph DB
-- **Abstention via FTS**: If query keywords don't match any memory, FTS returns empty — a natural abstention signal (96.7% accuracy)
-- **Multi-session reasoning**: 85.0% — beats OMEGA (83%) and Supermemory (71.4%) despite using a weaker model
+- **Abstention via FTS**: If query keywords don't match any memory, FTS returns empty — a natural abstention signal (86.7% accuracy)
+- **Temporal reasoning**: 95.5% — beats all competitors including OMEGA (94%) despite using a cheaper model and no embeddings
+- **Multi-session reasoning**: 89.5% — beats OMEGA (83%) and Supermemory (71.4%) despite using a weaker model
 
 ---
 

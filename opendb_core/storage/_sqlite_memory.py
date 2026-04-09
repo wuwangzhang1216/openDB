@@ -138,10 +138,14 @@ class SQLiteMemoryMixin:
         from opendb_core.utils.tokenizer import tokenize_for_fts
 
         async with self._write_lock:
-            # Check for conflicting existing memory (knowledge-update detection)
-            conflict_id = await self._find_conflicting_memory(
-            content, memory_type, threshold=0.3,
-        )
+            # Check for conflicting existing memory (knowledge-update detection).
+            # Skip for episodic memories — they are event records that should
+            # never overwrite each other.
+            conflict_id = None
+            if memory_type != "episodic":
+                conflict_id = await self._find_conflicting_memory(
+                    content, memory_type, threshold=0.3,
+                )
 
             await self._db.execute("BEGIN")
             try:

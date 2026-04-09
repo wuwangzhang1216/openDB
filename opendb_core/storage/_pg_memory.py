@@ -74,9 +74,13 @@ class PgMemoryMixin:
 
         pool = await get_pool()
         async with pool.acquire() as conn:
-            conflict_id = await self._find_conflicting_memory_pg(
-                conn, content, memory_type,
-            )
+            # Skip conflict detection for episodic memories — they are event
+            # records that should never overwrite each other.
+            conflict_id = None
+            if memory_type != "episodic":
+                conflict_id = await self._find_conflicting_memory_pg(
+                    conn, content, memory_type,
+                )
 
             if conflict_id:
                 row = await conn.fetchrow(

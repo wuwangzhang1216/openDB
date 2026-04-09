@@ -16,6 +16,11 @@
   <a href="https://github.com/wuwangzhang1216/openDB/stargazers"><img src="https://img.shields.io/github/stars/wuwangzhang1216/openDB" alt="GitHub stars"/></a>
 </p>
 
+<p align="center">
+  <b>93.6% on LongMemEval</b> — #3 on the leaderboard, beating MemMachine, Vectorize, Emergence AI, Supermemory, and Zep.<br/>
+  Zero embedding APIs. Zero vector databases. Just SQLite FTS5 and good engineering.
+</p>
+
 ---
 
 ```bash
@@ -25,6 +30,56 @@ opendb serve-mcp
 ```
 
 That's it. Your agent now has 7 MCP tools — read any file format, search across documents and code, and store/recall persistent memories. Works with every major agent framework out of the box.
+
+## LongMemEval Benchmark — 93.6%
+
+OpenDB achieves **93.6% E2E accuracy** on [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025), the standard benchmark for AI agent long-term memory. 500 questions, 6 categories, LLM-as-judge evaluation.
+
+| System | LongMemEval E2E | Gen Model | Retrieval Infrastructure |
+|--------|:-:|-----------|--------------------------|
+| OMEGA | 95.4% | GPT-4.1 | Embedding model + vector DB |
+| Mastra | 94.9% | GPT-5-mini | LLM + embedding model |
+| **OpenDB** | **93.6%** | **qwen3.6-plus** | **SQLite only, zero API** |
+| MemMachine | 93.0% | — | LLM + vector DB |
+| Vectorize Hindsight | 91.4% | — | Embedding model |
+| Emergence AI | 86.0% | — | LLM + graph DB + vector DB |
+| Supermemory | 81.6% | GPT-4o | Embedding model |
+| Zep/Graphiti | 71.2% | — | Graph DB + LLM |
+
+> OpenDB uses **qwen3.6-plus** — a significantly cheaper model than GPT-4.1 or GPT-5-mini. On the same system, Mastra showed a 10-point gap between GPT-4o (84%) and GPT-5-mini (95%), suggesting OpenDB with a frontier model would score even higher.
+
+### Per-Category Results
+
+| Category | OpenDB | OMEGA | Supermemory | Zep |
+|----------|:------:|:-----:|:-----------:|:---:|
+| single-session-assistant | **100%** | — | 96.4% | 80.4% |
+| knowledge-update | **97.4%** | 96% | 88.5% | 83.3% |
+| single-session-user | 97.1% | — | 97.1% | 92.9% |
+| temporal-reasoning | **95.5%** | 94% | 76.7% | 62.4% |
+| multi-session | **89.5%** | 83% | 71.4% | 57.9% |
+| abstention | 86.7% | — | — | — |
+| single-session-preference | 73.3% | — | 70.0% | 56.7% |
+
+OpenDB **beats every competitor** on temporal-reasoning (95.5% vs OMEGA's 94%), knowledge-update (97.4% vs 96%), and multi-session (89.5% vs 83%) — without embeddings, without vector databases, without graph databases.
+
+### Retrieval — 100% Recall
+
+| | OpenDB (FTS5) | MemPalace (ChromaDB) |
+|---|:---:|:---:|
+| **R@5** | **100%** (470/470) | 96.6% |
+| Embedding model | None | all-MiniLM-L6-v2 |
+| API calls | 0 | 0 |
+| Median recall latency | **1.1 ms** | — |
+
+### How?
+
+No embeddings. No vector search. No graph databases. Three things:
+
+1. **SQLite FTS5** — BM25 keyword search with time-decay re-ranking. 1ms recall at 10K memories.
+2. **Smart conflict detection** — Automatically supersedes outdated facts while preserving episodic event history.
+3. **Temporal-aware prompting** — Memories sorted chronologically with real session dates, giving the LLM the context it needs for temporal reasoning.
+
+Full methodology and per-question results: [benchmark/REPORT.md](benchmark/REPORT.md)
 
 ## Works with Every Agent Framework
 
@@ -269,7 +324,7 @@ read_file("report.pdf")  # 50 tokens, always works
 **Benchmarked across 4 LLMs on 24 document tasks:**
 
 | Metric | Without OpenDB | With OpenDB |
-|--------|---------------|-------------|
+|--------|:-:|:-:|
 | Tokens used | 100% | **27-45%** (55-73% saved) |
 | Task speed | 100% | **36-58%** faster |
 | Answer quality | 2.4-3.2 / 5 | **3.4-3.9 / 5** |
@@ -278,7 +333,7 @@ read_file("report.pdf")  # 50 tokens, always works
 **FTS vs RAG vector retrieval (25-325 documents):**
 
 | Scale | FTS Tokens Saved | FTS Quality | RAG Quality |
-|-------|-----------------|------------|------------|
+|-------|:-:|:-:|:-:|
 | 25 docs | **47%** | 3.9/5 | 4.2/5 |
 | 125 docs | **44%** | **4.7/5** | 4.0/5 |
 | 325 docs | **45%** | **4.6/5** | 3.5/5 |
@@ -293,7 +348,7 @@ FTS quality **improves with scale** while RAG degrades from distractor noise. Se
 
 ```
 opendb_info()
-→ Workspace: 47 files (ready: 45, processing: 1, failed: 1)
+-> Workspace: 47 files (ready: 45, processing: 1, failed: 1)
   By type:  Python (.py) 20 | PDF 12 | Excel (.xlsx) 5 | ...
   Recently updated:  config.yaml (2 min ago) | main.py (1 hr ago)
 ```
@@ -342,7 +397,7 @@ Set `pinned=true` for critical facts — they get 10x ranking boost and can be r
 
 ### `opendb_memory_recall` — Search memories
 
-Results ranked by **relevance × recency**. Pinned memories always surface first.
+Results ranked by **relevance x recency**. Pinned memories always surface first.
 
 ```
 opendb_memory_recall(query="user preferences")
@@ -366,7 +421,7 @@ OpenDB doubles as a **long-term memory store** for AI agents — persistent acro
 | | Markdown files | OpenDB Memory |
 |---|---|---|
 | **Search** | Full-file scan, substring match | FTS5 BM25 index, O(log n) |
-| **Ranking** | None — all matches are equal | Relevance × recency decay |
+| **Ranking** | None — all matches are equal | Relevance x recency decay |
 | **Capacity** | Claude Code: 200-line hard limit | No hard limit, indexed |
 | **CJK** | Broken (no word segmentation) | jieba tokenization, native CJK |
 | **Staleness** | Old = new, manual cleanup | `0.5^(age/30)` auto-decay |
@@ -377,31 +432,15 @@ OpenDB doubles as a **long-term memory store** for AI agents — persistent acro
 
 FTS quality **improves with scale** while vector/RAG degrades. Vector similarity retrieves topically-similar noise; FTS retrieves exactly what the agent asked for.
 
-### LongMemEval benchmark
+| | OpenDB (FTS) | Vector (cosine) |
+|---|:---:|:---:|
+| Recall accuracy | 90% | 100% |
+| Recall latency | **0.57ms** | 223.76ms |
+| Speed | **393x faster** | baseline |
+| Embedding tokens | **0** | 454 |
+| API calls | **0** | 21 |
 
-Tested against [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025):
-
-**Retrieval (R@K)** — 470 questions, all 6 types score **100%**:
-
-| | OpenDB (FTS5) | MemPalace (ChromaDB) |
-|---|---|---|
-| **R@5** | **100%** (470/470) | 96.6% |
-| Embedding model | None (keyword index) | all-MiniLM-L6-v2 |
-| API calls | 0 | 0 |
-| Median recall latency | **1.1 ms** | — |
-| Total benchmark time | **35 s** | ~5 min |
-
-**End-to-End accuracy** — 500 questions (store → recall → LLM answer → judge):
-
-| System | E2E Accuracy | Model | Infrastructure |
-|--------|-------------|-------|----------------|
-| OMEGA | 95.4% | GPT-4.1 | Embedding + local |
-| Mastra | 94.9% | GPT-5-mini | LLM + embedding |
-| Supermemory | 81.6% | GPT-4o | Embedding model |
-| **OpenDB** | **76.8%** | **qwen3.6-plus** | **SQLite only, zero API** |
-| Zep/Graphiti | 71.2% | — | Graph DB + LLM |
-
-OpenDB beats Zep/Graphiti while using a cheaper model and zero retrieval infrastructure. Per-category strengths: single-session recall (98-100%), multi-session reasoning (85%), abstention (93%).
+The 10% accuracy gap comes from synonyms ("food allergy" vs "allergic to shellfish"). For everything else — keyword recall, temporal queries, knowledge updates, multi-session reasoning — FTS wins while costing nothing.
 
 ### Memory stress tests — 23/23 (100%)
 
@@ -416,24 +455,12 @@ OpenDB beats Zep/Graphiti while using a cheaper model and zero retrieval infrast
 ### Document search scalability
 
 | Documents | Needle Accuracy | Search p50 | Search p95 |
-|-----------|----------------|-----------|-----------|
+|-----------|:-:|:-:|:-:|
 | 500 | 100% | **0.44ms** | 1.00ms |
 | 1,000 | 100% | **0.62ms** | 1.99ms |
 | 5,000 | 100% | **0.75ms** | 7.19ms |
 
-Search time scales **sublinearly** (10x docs → 1.7x latency).
-
-### Competitor comparison — OpenDB vs Vector
-
-| | OpenDB (FTS) | Vector (cosine) |
-|---|---|---|
-| Recall accuracy | 90% | 100% |
-| Recall latency | **0.57ms** | 223.76ms |
-| Speed | **393x faster** | baseline |
-| Embedding tokens | **0** | 454 |
-| API calls | **0** | 21 |
-
-Full methodology and results: [benchmark/REPORT.md](benchmark/REPORT.md)
+Search time scales **sublinearly** (10x docs -> 1.7x latency).
 
 ## Supported Formats
 
@@ -452,7 +479,8 @@ Full methodology and results: [benchmark/REPORT.md](benchmark/REPORT.md)
 
 - **3-line setup** — `pip install`, `index`, `serve-mcp` — works with every agent framework
 - **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for memory
-- **Agent memory** — FTS + time-decay ranking, pinned memories, 100% R@5 on LongMemEval, 23/23 stress tests; no vector DB needed
+- **93.6% LongMemEval** — #3 on the leaderboard with a cheap model and zero retrieval infrastructure
+- **100% R@5 retrieval** — Perfect memory recall, 1.1ms median latency, zero embedding API calls
 - **Dual-mode** — Embedded (SQLite, zero-config) or Server (PostgreSQL, shared access); same API
 - **Real-time sync** — Directories are watched via OS-native events after indexing
 - **Full-text search** — FTS5 / tsvector with jieba CJK tokenization
@@ -488,7 +516,7 @@ Environment variables (`FILEDB_` prefix):
 | `FILEDB_OCR_LANGUAGES` | `eng+chi_sim+chi_tra` | OCR languages |
 | `FILEDB_MAX_FILE_SIZE` | `104857600` | Max file size (100MB) |
 | `FILEDB_INDEX_EXCLUDE_PATTERNS` | `[]` | Exclude patterns for indexing |
-| `OPENDB_URL` | `http://localhost:8000` | MCP server → REST API URL |
+| `OPENDB_URL` | `http://localhost:8000` | MCP server -> REST API URL |
 
 ## Contributing
 

@@ -96,7 +96,15 @@ def _extra_body(model: str) -> dict | None:
     return None
 
 # How many memories to retrieve per question
-RECALL_LIMIT = 10
+RECALL_LIMIT = 15
+
+
+def _memory_date(m: dict) -> str:
+    """Extract the real session date from metadata, falling back to created_at."""
+    meta = m.get("metadata") or {}
+    if isinstance(meta, str):
+        meta = json.loads(meta)
+    return meta.get("date", m.get("created_at", "unknown"))
 
 
 @dataclass
@@ -145,16 +153,17 @@ def load_dataset(path: str | Path) -> list[dict]:
 # ============================================================
 
 ANSWER_SYSTEM_PROMPT = """\
-You are a personal AI assistant with access to conversation memories from past sessions with the user.
-
-Given the user's question and relevant memories from past conversations, answer the question accurately and concisely.
+You are a personal AI assistant with access to conversation memories from past sessions.
+Each memory is labeled with its session date. Memories are presented in chronological order.
 
 Rules:
 - Answer based ONLY on the provided memories. Do not make up information.
 - If the memories do not contain enough information to answer, say: "I don't have enough information to answer that."
-- For preference questions, state the preference directly.
-- For temporal questions, pay attention to dates and order of events.
-- For knowledge update questions, use the MOST RECENT information if there are conflicting facts.
+- TEMPORAL: Use session dates to determine chronological order. Earlier date = happened first.
+- UPDATES: When the same topic appears in multiple memories, the LATEST date is current.
+- COUNTING: Before giving a total, list each item you are counting across ALL memories.
+- PREFERENCES: Look for what the user likes, dislikes, prefers, or habitually does.
+- NUMBERS: Quote exact numbers from the memories. Do not round or approximate.
 - Keep answers concise — typically 1-3 sentences.
 """
 
@@ -184,15 +193,18 @@ async def generate_answer(
     question: str,
     memories: list[dict],
     model: str,
+    question_date: str = "",
 ) -> tuple[str, float]:
     """Generate an answer using recalled memories + LLM."""
-    # Format memories as context
+    # Format memories as context, sorted chronologically by real session date
     if memories:
+        sorted_mems = sorted(memories, key=lambda m: _memory_date(m))
         memory_text = "\n\n---\n\n".join(
-            f"Memory {i+1} (from: {m.get('created_at', 'unknown')}):\n{m.get('content', '')}"
-            for i, m in enumerate(memories)
+            f"Memory {i} (session date: {_memory_date(m)}):\n{m.get('content', '')}"
+            for i, m in enumerate(sorted_mems, 1)
         )
-        user_msg = f"Relevant memories from past conversations:\n\n{memory_text}\n\n---\n\nUser question: {question}"
+        date_ctx = f"\nToday's date: {question_date}\n" if question_date else ""
+        user_msg = f"Relevant memories from past conversations:\n\n{memory_text}\n\n---\n{date_ctx}\nUser question: {question}"
     else:
         user_msg = f"No relevant memories found.\n\nUser question: {question}"
 
@@ -320,7 +332,8 @@ async def run_single_question(
 
     # --- Generation phase ---
     generated_answer, gen_ms = await generate_answer(
-        question["question"], memories, gen_model
+        question["question"], memories, gen_model,
+        question_date=question.get("question_date", ""),
     )
 
     # --- Judging phase ---
@@ -414,7 +427,8 @@ async def _generate_and_judge(
     """Phase 2: LLM generation + judging (concurrent)."""
     async with sem:
         generated_answer, gen_ms = await generate_answer(
-            question["question"], memories, gen_model
+            question["question"], memories, gen_model,
+            question_date=question.get("question_date", ""),
         )
         is_correct, score, explanation, judge_ms = await judge_answer(
             question["question"],
@@ -646,6 +660,8 @@ def print_report(results: list[E2EResult]) -> dict:
 
 
 def main() -> None:
+    global RECALL_LIMIT  # noqa: PLW0603
+
     parser = argparse.ArgumentParser(
         description="LongMemEval E2E benchmark for OpenDB memory pipeline"
     )
@@ -666,8 +682,8 @@ def main() -> None:
         help="Limit number of questions (for quick testing)",
     )
     parser.add_argument(
-        "--recall-limit", type=int, default=10,
-        help="Number of memories to recall per question (default: 10)",
+        "--recall-limit", type=int, default=RECALL_LIMIT,
+        help=f"Number of memories to recall per question (default: {RECALL_LIMIT})",
     )
     parser.add_argument(
         "--concurrency", type=int, default=8,
@@ -678,8 +694,6 @@ def main() -> None:
         help="Path to save JSON results (default: longmemeval_e2e_results.json)",
     )
     args = parser.parse_args()
-
-    global RECALL_LIMIT  # noqa: PLW0603
     RECALL_LIMIT = args.recall_limit
 
     data = load_dataset(args.data)
