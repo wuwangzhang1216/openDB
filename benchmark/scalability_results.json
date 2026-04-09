@@ -1,0 +1,197 @@
+{
+  "elapsed_seconds": 101.8,
+  "scales": [
+    {
+      "doc_count": 500,
+      "index_time_ms": 5465.0,
+      "needle_accuracy": 100.0,
+      "needles_found": 5,
+      "needles_total": 5,
+      "search_median_ms": 0.44,
+      "search_p95_ms": 1.0,
+      "search_p99_ms": 1.0,
+      "search_max_ms": 1.0,
+      "needle_details": [
+        {
+          "query": "Project Alpha budget $3.7M",
+          "expected_file": "needle_alpha.txt",
+          "top_file": "needle_alpha.txt",
+          "found": true,
+          "latency_ms": 0.92
+        },
+        {
+          "query": "server incident downtime 47 minutes",
+          "expected_file": "needle_beta.txt",
+          "top_file": "needle_beta.txt",
+          "found": true,
+          "latency_ms": 0.5
+        },
+        {
+          "query": "Zenith Technologies partnership agreement",
+          "expected_file": "needle_gamma.txt",
+          "top_file": "needle_gamma.txt",
+          "found": true,
+          "latency_ms": 0.42
+        },
+        {
+          "query": "employee satisfaction survey 4.2 out of 5",
+          "expected_file": "needle_delta.txt",
+          "top_file": "needle_delta.txt",
+          "found": true,
+          "latency_ms": 0.85
+        },
+        {
+          "query": "patent adaptive caching algorithm US-2025-0042",
+          "expected_file": "needle_epsilon.txt",
+          "top_file": "needle_epsilon.txt",
+          "found": true,
+          "latency_ms": 0.8
+        }
+      ]
+    },
+    {
+      "doc_count": 1000,
+      "index_time_ms": 11547.0,
+      "needle_accuracy": 100.0,
+      "needles_found": 5,
+      "needles_total": 5,
+      "search_median_ms": 0.62,
+      "search_p95_ms": 1.99,
+      "search_p99_ms": 1.99,
+      "search_max_ms": 1.99,
+      "needle_details": [
+        {
+          "query": "Project Alpha budget $3.7M",
+          "expected_file": "needle_alpha.txt",
+          "top_file": "needle_alpha.txt",
+          "found": true,
+          "latency_ms": 1.19
+        },
+        {
+          "query": "server incident downtime 47 minutes",
+          "expected_file": "needle_beta.txt",
+          "top_file": "needle_beta.txt",
+          "found": true,
+          "latency_ms": 0.62
+        },
+        {
+          "query": "Zenith Technologies partnership agreement",
+          "expected_file": "needle_gamma.txt",
+          "top_file": "needle_gamma.txt",
+          "found": true,
+          "latency_ms": 0.71
+        },
+        {
+          "query": "employee satisfaction survey 4.2 out of 5",
+          "expected_file": "needle_delta.txt",
+          "top_file": "needle_delta.txt",
+          "found": true,
+          "latency_ms": 0.86
+        },
+        {
+          "query": "patent adaptive caching algorithm US-2025-0042",
+          "expected_file": "needle_epsilon.txt",
+          "top_file": "needle_epsilon.txt",
+          "found": true,
+          "latency_ms": 1.5
+        }
+      ]
+    },
+    {
+      "doc_count": 2000,
+      "index_time_ms": 21483.0,
+      "needle_accuracy": 100.0,
+      "needles_found": 5,
+      "needles_total": 5,
+      "search_median_ms": 0.55,
+      "search_p95_ms": 3.05,
+      "search_p99_ms": 3.05,
+      "search_max_ms": 3.05,
+      "needle_details": [
+        {
+          "query": "Project Alpha budget $3.7M",
+          "expected_file": "needle_alpha.txt",
+          "top_file": "needle_alpha.txt",
+          "found": true,
+          "latency_ms": 1.5
+        },
+        {
+          "query": "server incident downtime 47 minutes",
+          "expected_file": "needle_beta.txt",
+          "top_file": "needle_beta.txt",
+          "found": true,
+          "latency_ms": 0.66
+        },
+        {
+          "query": "Zenith Technologies partnership agreement",
+          "expected_file": "needle_gamma.txt",
+          "top_file": "needle_gamma.txt",
+          "found": true,
+          "latency_ms": 0.55
+        },
+        {
+          "query": "employee satisfaction survey 4.2 out of 5",
+          "expected_file": "needle_delta.txt",
+          "top_file": "needle_delta.txt",
+          "found": true,
+          "latency_ms": 0.77
+        },
+        {
+          "query": "patent adaptive caching algorithm US-2025-0042",
+          "expected_file": "needle_epsilon.txt",
+          "top_file": "needle_epsilon.txt",
+          "found": true,
+          "latency_ms": 0.79
+        }
+      ]
+    },
+    {
+      "doc_count": 5000,
+      "index_time_ms": 57840.0,
+      "needle_accuracy": 100.0,
+      "needles_found": 5,
+      "needles_total": 5,
+      "search_median_ms": 0.75,
+      "search_p95_ms": 7.19,
+      "search_p99_ms": 7.19,
+      "search_max_ms": 7.19,
+      "needle_details": [
+        {
+          "query": "Project Alpha budget $3.7M",
+          "expected_file": "needle_alpha.txt",
+          "top_file": "needle_alpha.txt",
+          "found": true,
+          "latency_ms": 1.99
+        },
+        {
+          "query": "server incident downtime 47 minutes",
+          "expected_file": "needle_beta.txt",
+          "top_file": "needle_beta.txt",
+          "found": true,
+          "latency_ms": 1.08
+        },
+        {
+          "query": "Zenith Technologies partnership agreement",
+          "expected_file": "needle_gamma.txt",
+          "top_file": "needle_gamma.txt",
+          "found": true,
+          "latency_ms": 0.75
+        },
+        {
+          "query": "employee satisfaction survey 4.2 out of 5",
+          "expected_file": "needle_delta.txt",
+          "top_file": "needle_delta.txt",
+          "found": true,
+          "latency_ms": 1.3
+        },
+        {
+          "query": "patent adaptive caching algorithm US-2025-0042",
+          "expected_file": "needle_epsilon.txt",
+          "top_file": "needle_epsilon.txt",
+          "found": true,
+          "latency_ms": 1.23
+        }
+      ]
+    }
+  ]
+}

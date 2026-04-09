@@ -73,6 +73,10 @@ class RAGIndex:
             api_key=api_key or os.environ.get("OPENROUTER_API_KEY")
                     or os.environ.get("OPENAI_API_KEY", ""),
             base_url=api_base or "https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://github.com/wuwangzhang1216/openDB",
+                "X-Title": "openDB",
+            },
         )
         self.vectors: np.ndarray | None = None  # (N, EMBED_DIM) normalized
         self.meta: list[dict] = []  # parallel list: {filename, char_start, chunk_text}

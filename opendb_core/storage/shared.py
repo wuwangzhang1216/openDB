@@ -5,6 +5,8 @@ SQLite and PostgreSQL implementations.
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime, timezone
 
 
 def build_highlight(text: str, query: str, context_chars: int = 80) -> str:
@@ -35,8 +37,79 @@ STOPWORDS = frozenset(
     "a an and are as at be but by do for from had has have he her his how i "
     "if in is it its just me my no not of on or our she so than that the them "
     "then there these they this to too up us was we were what when where which "
-    "who why will with would you your".split()
+    "who why will with would you your "
+    # Extended: common verbs/prepositions that cause false positives in OR mode
+    "about after also back been before being between both came can come could "
+    "did does done each even few find first get got into know let like long "
+    "look made make many may more most much must need new now off old only "
+    "other over own part put right said same say see set she should show side "
+    "since some still such take tell than that through time under upon very "
+    "want way well went what".split()
 )
+
+
+def content_token_set(text: str) -> set[str]:
+    """Extract significant lowercased tokens from text (excluding stopwords)."""
+    return {
+        w.lower()
+        for w in re.split(r"\W+", text)
+        if len(w) > 2 and w.lower() not in STOPWORDS
+    }
+
+
+def jaccard_similarity(a: set[str], b: set[str]) -> float:
+    """Jaccard similarity between two token sets."""
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+# ---------------------------------------------------------------------------
+# Temporal scoring
+# ---------------------------------------------------------------------------
+
+_RECENCY_KEYWORDS = frozenset({
+    "current", "latest", "recent", "now", "today", "new", "newest", "last", "present",
+    "最新", "最近", "目前", "现在", "当前",
+})
+
+
+def has_recency_intent(query: str) -> bool:
+    """Return True if the query implies interest in the most recent state."""
+    return bool(set(query.lower().split()) & _RECENCY_KEYWORDS)
+
+
+def compute_temporal_score(
+    fts_score: float,
+    age_days_from_db: float,
+    metadata: dict,
+    halflife: float,
+    pinned: bool,
+    recency_intent: bool = False,
+) -> tuple[float, float]:
+    """Compute time-decay score, preferring metadata["date"] when available.
+
+    Returns (score, effective_age_days) so callers can use age for tiebreaking.
+    """
+    event_date_str = metadata.get("date") if metadata else None
+    if event_date_str:
+        try:
+            event_dt = datetime.strptime(event_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            age_days = max(
+                (datetime.now(timezone.utc) - event_dt).total_seconds() / 86400.0,
+                0.0,
+            )
+        except (ValueError, TypeError):
+            age_days = age_days_from_db
+    else:
+        age_days = age_days_from_db
+
+    effective_halflife = halflife / 2.0 if recency_intent else halflife
+    decay = 0.5 ** (age_days / effective_halflife)
+    pin_boost = 10.0 if pinned else 1.0
+    return fts_score * decay * pin_boost, age_days
 
 
 def escape_fts5(query: str, *, use_or: bool = False) -> str:

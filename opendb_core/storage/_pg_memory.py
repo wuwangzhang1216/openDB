@@ -8,6 +8,13 @@ from __future__ import annotations
 import json
 import logging
 
+from opendb_core.storage.shared import (
+    compute_temporal_score,
+    content_token_set,
+    has_recency_intent,
+    jaccard_similarity,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,6 +24,38 @@ class PgMemoryMixin:
     All methods acquire their own connection from the pool via
     ``opendb_core.database.get_pool()``.
     """
+
+    async def _find_conflicting_memory_pg(
+        self,
+        conn,
+        content: str,
+        memory_type: str,
+        threshold: float = 0.3,
+    ) -> str | None:
+        """Find an existing PG memory that overlaps significantly.
+
+        Returns the UUID string of the best match, or None.
+        """
+        new_tokens = content_token_set(content)
+        if len(new_tokens) < 2:
+            return None
+
+        rows = await conn.fetch(
+            "SELECT id, content FROM memories "
+            "WHERE memory_type = $1 "
+            "ORDER BY updated_at DESC LIMIT 20",
+            memory_type,
+        )
+
+        best_id: str | None = None
+        best_sim = 0.0
+        for r in rows:
+            old_tokens = content_token_set(r["content"])
+            sim = jaccard_similarity(new_tokens, old_tokens)
+            if sim >= threshold and sim > best_sim:
+                best_sim = sim
+                best_id = str(r["id"])
+        return best_id
 
     async def store_memory(
         self,
@@ -35,21 +74,35 @@ class PgMemoryMixin:
 
         pool = await get_pool()
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                INSERT INTO memories (id, content, memory_type, pinned, tags, metadata,
-                                      content_jieba)
-                VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-                RETURNING id, content, memory_type, pinned, tags, metadata, created_at, updated_at
-                """,
-                _uuid.UUID(memory_id),
-                content,
-                memory_type,
-                pinned,
-                tags,
-                json.dumps(metadata),
-                tokenize_for_fts(content),
+            conflict_id = await self._find_conflicting_memory_pg(
+                conn, content, memory_type,
             )
+
+            if conflict_id:
+                row = await conn.fetchrow(
+                    """
+                    UPDATE memories
+                    SET content = $1, pinned = $2, tags = $3, metadata = $4::jsonb,
+                        content_jieba = $5, updated_at = now()
+                    WHERE id = $6
+                    RETURNING id, content, memory_type, pinned, tags, metadata,
+                              created_at, updated_at
+                    """,
+                    content, pinned, tags, json.dumps(metadata),
+                    tokenize_for_fts(content), _uuid.UUID(conflict_id),
+                )
+            else:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO memories (id, content, memory_type, pinned, tags, metadata,
+                                          content_jieba)
+                    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
+                    RETURNING id, content, memory_type, pinned, tags, metadata,
+                              created_at, updated_at
+                    """,
+                    _uuid.UUID(memory_id), content, memory_type, pinned, tags,
+                    json.dumps(metadata), tokenize_for_fts(content),
+                )
         return _pg_memory_row(row)
 
     async def recall_memories(
@@ -147,41 +200,65 @@ class PgMemoryMixin:
             where_clause = " AND ".join(conditions)
             n = len(params)
 
+            # Fetch extra rows for Python-side temporal re-ranking
+            fetch_limit = max(limit * 3, 60)
+
             search_sql = f"""
                 SELECT m.id, m.content, m.memory_type, m.pinned, m.tags, m.metadata,
                        m.created_at, m.updated_at,
                        {rank_expr} AS fts_score,
-                       ({rank_expr}
-                        * power(0.5, EXTRACT(EPOCH FROM (now() - m.created_at))
-                                     / 86400.0 / {halflife:.1f})
-                        * CASE WHEN m.pinned THEN 10.0 ELSE 1.0 END) AS score,
+                       EXTRACT(EPOCH FROM (now() - m.updated_at)) / 86400.0 AS age_days,
                        {headline_expr} AS highlight
                 FROM memories m
                 WHERE {where_clause}
-                ORDER BY score DESC
-                LIMIT ${n + 1} OFFSET ${n + 2}
+                ORDER BY {rank_expr} DESC
+                LIMIT ${n + 1}
             """
             count_sql = f"""
                 SELECT COUNT(*) FROM memories m WHERE {where_clause}
             """
 
-            rows = await conn.fetch(search_sql, *params, limit, offset)
+            rows = await conn.fetch(search_sql, *params, fetch_limit)
             total = await conn.fetchval(count_sql, *params)
 
-        results = []
+        recency = has_recency_intent(query)
+        scored = []
         for r in rows:
-            results.append({
+            fts_score = float(r["fts_score"]) if r["fts_score"] else 0.0
+            db_age = float(r["age_days"]) if r["age_days"] else 0.0
+            meta = json.loads(r["metadata"]) if r["metadata"] else {}
+            score, eff_age = compute_temporal_score(
+                fts_score, db_age, meta, halflife,
+                pinned=bool(r.get("pinned", False)), recency_intent=recency,
+            )
+            scored.append({
                 "memory_id": str(r["id"]),
                 "content": r["content"],
                 "memory_type": r["memory_type"],
                 "pinned": bool(r.get("pinned", False)),
                 "tags": r["tags"],
-                "metadata": json.loads(r["metadata"]) if r["metadata"] else {},
+                "metadata": meta,
                 "highlight": r["highlight"] or "",
-                "score": round(float(r["score"]), 4) if r["score"] else 0.0,
+                "score": score,
                 "created_at": r["created_at"].isoformat() + "Z" if r["created_at"] else None,
                 "updated_at": r["updated_at"].isoformat() + "Z" if r["updated_at"] else None,
+                "_age_days": eff_age,
             })
+
+        # Recency tiebreaker
+        if len(scored) >= 2:
+            max_score = max(s["score"] for s in scored)
+            if max_score > 0:
+                for s in scored:
+                    if s["score"] / max_score > 0.7:
+                        recency_bonus = 1.0 + 0.3 * (0.5 ** (s["_age_days"] / 1.0))
+                        s["score"] = s["score"] * recency_bonus
+
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        for s in scored:
+            s.pop("_age_days", None)
+            s["score"] = round(s["score"], 4)
+        results = scored[offset : offset + limit]
         return {"total": total or 0, "results": results}
 
     async def get_memory(self, memory_id: str) -> dict | None:

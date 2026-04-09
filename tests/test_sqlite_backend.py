@@ -205,6 +205,88 @@ class TestSQLiteMemory:
         assert mem is None
 
 
+    @pytest.mark.asyncio
+    async def test_knowledge_update_supersede(self, backend) -> None:
+        """Storing a memory that overlaps an existing one should supersede it."""
+        await backend.store_memory(
+            memory_id="mem-orig",
+            content="My favorite color is blue.",
+            memory_type="semantic",
+            tags=["fact"],
+            metadata={},
+        )
+        await backend.store_memory(
+            memory_id="mem-updated",
+            content="My favorite color is green. I changed it from blue.",
+            memory_type="semantic",
+            tags=["fact"],
+            metadata={},
+        )
+        # Should have superseded the original — only 1 memory in DB
+        all_mems = await backend.list_memories(
+            memory_type="semantic", tags=None, limit=100, offset=0,
+        )
+        color_mems = [
+            m for m in all_mems["memories"] if "favorite color" in m["content"]
+        ]
+        assert len(color_mems) == 1, f"Expected 1 memory, got {len(color_mems)}"
+        assert "green" in color_mems[0]["content"]
+
+        # Recall should return the updated version
+        result = await backend.recall_memories(
+            query="favorite color",
+            memory_type=None, tags=None, limit=5, offset=0,
+        )
+        assert result["total"] > 0
+        assert "green" in result["results"][0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_recall_prefers_metadata_date(self, backend) -> None:
+        """Memories with newer metadata dates should rank higher."""
+        await backend.store_memory(
+            memory_id="old-event",
+            content="Bought a Honda Civic.",
+            memory_type="episodic",
+            tags=[],
+            metadata={"date": "2023-06-01"},
+        )
+        await backend.store_memory(
+            memory_id="new-event",
+            content="Bought a Tesla Model Y.",
+            memory_type="episodic",
+            tags=[],
+            metadata={"date": "2024-02-01"},
+        )
+        result = await backend.recall_memories(
+            query="Bought car",
+            memory_type=None, tags=None, limit=5, offset=0,
+        )
+        assert len(result["results"]) >= 2
+        assert "Tesla" in result["results"][0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_no_false_supersede(self, backend) -> None:
+        """Unrelated memories should NOT be superseded."""
+        await backend.store_memory(
+            memory_id="mem-a",
+            content="I love Python programming.",
+            memory_type="semantic",
+            tags=[],
+            metadata={},
+        )
+        await backend.store_memory(
+            memory_id="mem-b",
+            content="I love hiking in the mountains.",
+            memory_type="semantic",
+            tags=[],
+            metadata={},
+        )
+        all_mems = await backend.list_memories(
+            memory_type="semantic", tags=None, limit=100, offset=0,
+        )
+        assert all_mems["total"] == 2
+
+
 class TestSQLiteFileCRUD:
     @pytest.mark.asyncio
     async def test_list_and_delete(self, backend) -> None:

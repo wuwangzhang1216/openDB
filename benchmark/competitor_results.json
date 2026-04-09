@@ -1,0 +1,334 @@
+{
+  "config": {
+    "memories": 20,
+    "queries": 20,
+    "backends": [
+      "opendb",
+      "vector"
+    ]
+  },
+  "results": [
+    {
+      "backend": "OpenDB (FTS)",
+      "accuracy": 90.0,
+      "store_ms": 119.1,
+      "recall_median_ms": 0.57,
+      "recall_p95_ms": 151.59,
+      "embed_tokens": 0,
+      "embed_api_calls": 0,
+      "details": [
+        {
+          "query": "favorite restaurant",
+          "expected": "Chez Panisse",
+          "found": true,
+          "latency_ms": 151.59,
+          "top_result": "My favorite restaurant is Chez Panisse in Berkeley. We go there for special occa"
+        },
+        {
+          "query": "food allergy",
+          "expected": "shellfish",
+          "found": false,
+          "latency_ms": 1.12,
+          "top_result": "(empty)"
+        },
+        {
+          "query": "revenue target 2025",
+          "expected": "$50 million",
+          "found": true,
+          "latency_ms": 0.74,
+          "top_result": "Our company's annual revenue target for 2025 is $50 million, up from $38M in 202"
+        },
+        {
+          "query": "learning Japanese",
+          "expected": "Genki",
+          "found": true,
+          "latency_ms": 0.61,
+          "top_result": "I started learning Japanese in September 2024 using the Genki textbook series."
+        },
+        {
+          "query": "deployment pipeline CI/CD",
+          "expected": "ArgoCD",
+          "found": true,
+          "latency_ms": 0.54,
+          "top_result": "The deployment pipeline uses GitHub Actions → Docker → AWS EKS with ArgoCD for G"
+        },
+        {
+          "query": "daughter birthday",
+          "expected": "June 15",
+          "found": true,
+          "latency_ms": 0.51,
+          "top_result": "My daughter's birthday is June 15th. She'll turn 7 this year and wants a science"
+        },
+        {
+          "query": "messaging app switch",
+          "expected": "Teams",
+          "found": false,
+          "latency_ms": 0.48,
+          "top_result": "(empty)"
+        },
+        {
+          "query": "database migration",
+          "expected": "PostgreSQL",
+          "found": true,
+          "latency_ms": 0.46,
+          "top_result": "The database migration from MySQL to PostgreSQL is scheduled for Q2 2025."
+        },
+        {
+          "query": "running personal best",
+          "expected": "22 minutes",
+          "found": true,
+          "latency_ms": 0.51,
+          "top_result": "I run 5km every morning at 6am. My personal best is 22 minutes 30 seconds."
+        },
+        {
+          "query": "biggest client",
+          "expected": "Acme",
+          "found": true,
+          "latency_ms": 0.41,
+          "top_result": "Our biggest client is Acme Corp, accounting for 30% of total revenue."
+        },
+        {
+          "query": "dark mode preference",
+          "expected": "dark mode",
+          "found": true,
+          "latency_ms": 0.54,
+          "top_result": "I prefer dark mode in all applications. Light themes give me headaches."
+        },
+        {
+          "query": "sprint cycle",
+          "expected": "two-week",
+          "found": true,
+          "latency_ms": 0.4,
+          "top_result": "The team uses a two-week sprint cycle with planning on Mondays and retros on Fri"
+        },
+        {
+          "query": "home office equipment",
+          "expected": "MacBook",
+          "found": true,
+          "latency_ms": 0.52,
+          "top_result": "My home office setup: MacBook Pro M3, 27-inch LG monitor, Herman Miller Aeron ch"
+        },
+        {
+          "query": "CRM vendor evaluation",
+          "expected": "Salesforce",
+          "found": true,
+          "latency_ms": 0.87,
+          "top_result": "We're evaluating three vendors for the new CRM: Salesforce, HubSpot, and Pipedri"
+        },
+        {
+          "query": "machine learning course",
+          "expected": "Andrew Ng",
+          "found": true,
+          "latency_ms": 0.75,
+          "top_result": "I took a machine learning course on Coursera taught by Andrew Ng. Completed in M"
+        },
+        {
+          "query": "production server specs",
+          "expected": "Ubuntu",
+          "found": true,
+          "latency_ms": 1.05,
+          "top_result": "The production server runs on Ubuntu 22.04 LTS with 64GB RAM and NVMe storage."
+        },
+        {
+          "query": "board meeting schedule",
+          "expected": "December 12",
+          "found": true,
+          "latency_ms": 0.78,
+          "top_result": "Our Q4 board meeting is scheduled for December 12th at the downtown Hilton."
+        },
+        {
+          "query": "currently reading book",
+          "expected": "Kleppmann",
+          "found": true,
+          "latency_ms": 0.59,
+          "top_result": "I'm reading 'Designing Data-Intensive Applications' by Martin Kleppmann. Great b"
+        },
+        {
+          "query": "API rate limit",
+          "expected": "1000 requests",
+          "found": true,
+          "latency_ms": 0.58,
+          "top_result": "The API rate limit is 1000 requests per minute per API key, with burst up to 150"
+        },
+        {
+          "query": "Japan travel plan",
+          "expected": "cherry blossom",
+          "found": true,
+          "latency_ms": 0.56,
+          "top_result": "My partner and I are planning a trip to Japan in cherry blossom season (late Mar"
+        }
+      ]
+    },
+    {
+      "backend": "Vector (cosine)",
+      "accuracy": 100.0,
+      "store_ms": 1481.3,
+      "recall_median_ms": 223.76,
+      "recall_p95_ms": 709.42,
+      "embed_tokens": 454,
+      "embed_api_calls": 21,
+      "details": [
+        {
+          "query": "favorite restaurant",
+          "expected": "Chez Panisse",
+          "found": true,
+          "latency_ms": 343.32,
+          "top_result": "My favorite restaurant is Chez Panisse in Berkeley. We go there for special occa",
+          "top_score": 0.5102
+        },
+        {
+          "query": "food allergy",
+          "expected": "shellfish",
+          "found": true,
+          "latency_ms": 210.22,
+          "top_result": "I'm allergic to shellfish, especially shrimp and lobster. Discovered this in 201",
+          "top_score": 0.425
+        },
+        {
+          "query": "revenue target 2025",
+          "expected": "$50 million",
+          "found": true,
+          "latency_ms": 194.72,
+          "top_result": "Our company's annual revenue target for 2025 is $50 million, up from $38M in 202",
+          "top_score": 0.6618
+        },
+        {
+          "query": "learning Japanese",
+          "expected": "Genki",
+          "found": true,
+          "latency_ms": 258.5,
+          "top_result": "I started learning Japanese in September 2024 using the Genki textbook series.",
+          "top_score": 0.5057
+        },
+        {
+          "query": "deployment pipeline CI/CD",
+          "expected": "ArgoCD",
+          "found": true,
+          "latency_ms": 203.3,
+          "top_result": "The deployment pipeline uses GitHub Actions → Docker → AWS EKS with ArgoCD for G",
+          "top_score": 0.5774
+        },
+        {
+          "query": "daughter birthday",
+          "expected": "June 15",
+          "found": true,
+          "latency_ms": 183.28,
+          "top_result": "My daughter's birthday is June 15th. She'll turn 7 this year and wants a science",
+          "top_score": 0.5314
+        },
+        {
+          "query": "messaging app switch",
+          "expected": "Teams",
+          "found": true,
+          "latency_ms": 284.1,
+          "top_result": "We switched from Slack to Microsoft Teams in January 2025 due to enterprise lice",
+          "top_score": 0.2752
+        },
+        {
+          "query": "database migration",
+          "expected": "PostgreSQL",
+          "found": true,
+          "latency_ms": 296.63,
+          "top_result": "The database migration from MySQL to PostgreSQL is scheduled for Q2 2025.",
+          "top_score": 0.4805
+        },
+        {
+          "query": "running personal best",
+          "expected": "22 minutes",
+          "found": true,
+          "latency_ms": 223.91,
+          "top_result": "I run 5km every morning at 6am. My personal best is 22 minutes 30 seconds.",
+          "top_score": 0.5611
+        },
+        {
+          "query": "biggest client",
+          "expected": "Acme",
+          "found": true,
+          "latency_ms": 240.92,
+          "top_result": "Our biggest client is Acme Corp, accounting for 30% of total revenue.",
+          "top_score": 0.5767
+        },
+        {
+          "query": "dark mode preference",
+          "expected": "dark mode",
+          "found": true,
+          "latency_ms": 235.99,
+          "top_result": "I prefer dark mode in all applications. Light themes give me headaches.",
+          "top_score": 0.5321
+        },
+        {
+          "query": "sprint cycle",
+          "expected": "two-week",
+          "found": true,
+          "latency_ms": 709.42,
+          "top_result": "The team uses a two-week sprint cycle with planning on Mondays and retros on Fri",
+          "top_score": 0.5265
+        },
+        {
+          "query": "home office equipment",
+          "expected": "MacBook",
+          "found": true,
+          "latency_ms": 197.96,
+          "top_result": "My home office setup: MacBook Pro M3, 27-inch LG monitor, Herman Miller Aeron ch",
+          "top_score": 0.5095
+        },
+        {
+          "query": "CRM vendor evaluation",
+          "expected": "Salesforce",
+          "found": true,
+          "latency_ms": 233.91,
+          "top_result": "We're evaluating three vendors for the new CRM: Salesforce, HubSpot, and Pipedri",
+          "top_score": 0.5255
+        },
+        {
+          "query": "machine learning course",
+          "expected": "Andrew Ng",
+          "found": true,
+          "latency_ms": 223.6,
+          "top_result": "I took a machine learning course on Coursera taught by Andrew Ng. Completed in M",
+          "top_score": 0.571
+        },
+        {
+          "query": "production server specs",
+          "expected": "Ubuntu",
+          "found": true,
+          "latency_ms": 262.22,
+          "top_result": "The production server runs on Ubuntu 22.04 LTS with 64GB RAM and NVMe storage.",
+          "top_score": 0.6127
+        },
+        {
+          "query": "board meeting schedule",
+          "expected": "December 12",
+          "found": true,
+          "latency_ms": 191.84,
+          "top_result": "Our Q4 board meeting is scheduled for December 12th at the downtown Hilton.",
+          "top_score": 0.5618
+        },
+        {
+          "query": "currently reading book",
+          "expected": "Kleppmann",
+          "found": true,
+          "latency_ms": 192.49,
+          "top_result": "I'm reading 'Designing Data-Intensive Applications' by Martin Kleppmann. Great b",
+          "top_score": 0.3986
+        },
+        {
+          "query": "API rate limit",
+          "expected": "1000 requests",
+          "found": true,
+          "latency_ms": 222.63,
+          "top_result": "The API rate limit is 1000 requests per minute per API key, with burst up to 150",
+          "top_score": 0.618
+        },
+        {
+          "query": "Japan travel plan",
+          "expected": "cherry blossom",
+          "found": true,
+          "latency_ms": 216.92,
+          "top_result": "My partner and I are planning a trip to Japan in cherry blossom season (late Mar",
+          "top_score": 0.5505
+        }
+      ]
+    }
+  ]
+}

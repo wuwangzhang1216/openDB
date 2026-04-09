@@ -57,6 +57,10 @@ SCALE = "small"  # mutated in main() per --scale flag
 _openrouter_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+    default_headers={
+        "HTTP-Referer": "https://github.com/wuwangzhang1216/openDB",
+        "X-Title": "openDB",
+    },
 )
 
 # Patch chat.completions.create to inject provider preferences on every call

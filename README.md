@@ -379,17 +379,61 @@ FTS quality **improves with scale** while vector/RAG degrades. Vector similarity
 
 ### LongMemEval benchmark
 
-Tested against [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025) — 470 questions across 6 types:
+Tested against [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025):
+
+**Retrieval (R@K)** — 470 questions, all 6 types score **100%**:
 
 | | OpenDB (FTS5) | MemPalace (ChromaDB) |
 |---|---|---|
 | **R@5** | **100%** (470/470) | 96.6% |
 | Embedding model | None (keyword index) | all-MiniLM-L6-v2 |
 | API calls | 0 | 0 |
-| Median recall latency | **0.9 ms** | — |
-| Total benchmark time | **32 s** | ~5 min |
+| Median recall latency | **1.1 ms** | — |
+| Total benchmark time | **35 s** | ~5 min |
 
-All 6 question types score 100%. Reproduce: `python benchmark/longmemeval_bench.py`
+**End-to-End accuracy** — 500 questions (store → recall → LLM answer → judge):
+
+| System | E2E Accuracy | Model | Infrastructure |
+|--------|-------------|-------|----------------|
+| OMEGA | 95.4% | GPT-4.1 | Embedding + local |
+| Mastra | 94.9% | GPT-5-mini | LLM + embedding |
+| Supermemory | 81.6% | GPT-4o | Embedding model |
+| **OpenDB** | **76.8%** | **qwen3.6-plus** | **SQLite only, zero API** |
+| Zep/Graphiti | 71.2% | — | Graph DB + LLM |
+
+OpenDB beats Zep/Graphiti while using a cheaper model and zero retrieval infrastructure. Per-category strengths: single-session recall (98-100%), multi-session reasoning (85%), abstention (93%).
+
+### Memory stress tests — 23/23 (100%)
+
+| Suite | Result | Description |
+|-------|--------|-------------|
+| Knowledge Update | 5/5 | Conflict detection auto-supersedes stale facts |
+| Abstention | 5/5 | FTS correctly returns empty for unrelated queries |
+| Temporal Reasoning | 4/4 | Recency-biased ranking surfaces latest events |
+| CJK Support | 5/5 | Chinese, Japanese, mixed CJK-English |
+| Memory Scale (10K) | 4/4 | **0.5ms recall** at 10,000 memories |
+
+### Document search scalability
+
+| Documents | Needle Accuracy | Search p50 | Search p95 |
+|-----------|----------------|-----------|-----------|
+| 500 | 100% | **0.44ms** | 1.00ms |
+| 1,000 | 100% | **0.62ms** | 1.99ms |
+| 5,000 | 100% | **0.75ms** | 7.19ms |
+
+Search time scales **sublinearly** (10x docs → 1.7x latency).
+
+### Competitor comparison — OpenDB vs Vector
+
+| | OpenDB (FTS) | Vector (cosine) |
+|---|---|---|
+| Recall accuracy | 90% | 100% |
+| Recall latency | **0.57ms** | 223.76ms |
+| Speed | **393x faster** | baseline |
+| Embedding tokens | **0** | 454 |
+| API calls | **0** | 21 |
+
+Full methodology and results: [benchmark/REPORT.md](benchmark/REPORT.md)
 
 ## Supported Formats
 
@@ -408,7 +452,7 @@ All 6 question types score 100%. Reproduce: `python benchmark/longmemeval_bench.
 
 - **3-line setup** — `pip install`, `index`, `serve-mcp` — works with every agent framework
 - **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for memory
-- **Agent memory** — FTS + time-decay ranking, pinned memories, 100% on LongMemEval; no vector DB needed
+- **Agent memory** — FTS + time-decay ranking, pinned memories, 100% R@5 on LongMemEval, 23/23 stress tests; no vector DB needed
 - **Dual-mode** — Embedded (SQLite, zero-config) or Server (PostgreSQL, shared access); same API
 - **Real-time sync** — Directories are watched via OS-native events after indexing
 - **Full-text search** — FTS5 / tsvector with jieba CJK tokenization
