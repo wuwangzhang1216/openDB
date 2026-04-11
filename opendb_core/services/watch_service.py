@@ -254,7 +254,20 @@ def stop_watch(watch_id: str) -> bool:
 
     task = _consumer_tasks.pop(watch_id, None)
     if task is not None:
-        task.cancel()
+        if not task.done():
+            task.cancel()
+        # If the consumer task was scheduled on a loop that never ran (e.g.
+        # in unit tests that create a fresh loop and close it without ever
+        # running it), the wrapped coroutine never reaches its first await
+        # and Python emits a "coroutine '_consume_queue' was never awaited"
+        # warning when the task is garbage-collected. Explicitly closing the
+        # coroutine here marks it as cleanly finished and silences the warning.
+        try:
+            coro = task.get_coro()
+            if coro is not None:
+                coro.close()
+        except Exception:
+            pass
 
     _queues.pop(watch_id, None)
 
