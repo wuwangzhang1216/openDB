@@ -10,8 +10,9 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_server.client import close_client
 from mcp_server.models import (
-    GlobInput, InfoInput, MemoryForgetInput, MemoryRecallInput,
-    MemoryStoreInput, ReadInput, SearchInput,
+    AddWorkspaceInput, CurrentWorkspaceInput, GlobInput, InfoInput,
+    ListWorkspacesInput, MemoryForgetInput, MemoryRecallInput, MemoryStoreInput,
+    ReadInput, RemoveWorkspaceInput, SearchInput, UseWorkspaceInput,
 )
 from mcp_server import client as opendb
 
@@ -368,4 +369,139 @@ async def opendb_memory_forget(params: MemoryForgetInput) -> str:
         memory_id=params.memory_id,
         query=params.query,
         memory_type=params.memory_type,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Workspace Management Tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    name="opendb_list_workspaces",
+    annotations={
+        "title": "List Workspaces",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_list_workspaces(params: ListWorkspacesInput) -> str:
+    """List all registered workspaces, with the active one marked.
+
+    Typical agent workflow for working across multiple projects:
+      1. opendb_list_workspaces — see what's available
+      2. opendb_use_workspace(id) — switch to the one you want
+      3. opendb_read / opendb_search / opendb_glob — all now target that workspace
+
+    Returns:
+        str: A human-readable list: active workspace header, then all known
+             workspaces with their id, name, root path, and last-used time.
+    """
+    return await opendb.list_workspaces()
+
+
+@mcp.tool(
+    name="opendb_current_workspace",
+    annotations={
+        "title": "Current Workspace",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_current_workspace(params: CurrentWorkspaceInput) -> str:
+    """Return identity of the currently active workspace (id, name, root).
+
+    Use this to answer "which workspace am I in?" before doing work.
+    opendb_info also includes this information alongside file statistics.
+    """
+    return await opendb.current_workspace()
+
+
+@mcp.tool(
+    name="opendb_use_workspace",
+    annotations={
+        "title": "Switch Workspace",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_use_workspace(params: UseWorkspaceInput) -> str:
+    """Switch the active workspace. All subsequent read/search/glob/memory
+    calls will target the new workspace.
+
+    Accepts either a workspace id (from opendb_list_workspaces) or a root path.
+    Switching between already-opened workspaces is near-instant — the backend
+    registry keeps each workspace's SQLite connection warm.
+
+    Args:
+        params.id_or_root: Workspace id (e.g. 'a3f2b1c8') or root path.
+
+    Examples:
+        - Switch by id: id_or_root="a3f2b1c8"
+        - Switch by path: id_or_root="D:/work/openDB"
+    """
+    return await opendb.use_workspace(params.id_or_root)
+
+
+@mcp.tool(
+    name="opendb_add_workspace",
+    annotations={
+        "title": "Add Workspace",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_add_workspace(params: AddWorkspaceInput) -> str:
+    """Register a new workspace at the given root path.
+
+    Creates the ``.opendb/`` directory layout if it doesn't already exist.
+    By default this does NOT switch to the new workspace — pass switch=True
+    if you want to start using it immediately.
+
+    Args:
+        params.root: Absolute path to the workspace root directory.
+        params.name: Optional friendly name (defaults to directory basename).
+        params.switch: If true, also make this the active workspace.
+    """
+    return await opendb.add_workspace(
+        root=params.root,
+        name=params.name,
+        switch=params.switch,
+    )
+
+
+@mcp.tool(
+    name="opendb_remove_workspace",
+    annotations={
+        "title": "Remove Workspace",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_remove_workspace(params: RemoveWorkspaceInput) -> str:
+    """Unregister a workspace from the global registry.
+
+    This does NOT delete any files on disk — it only removes the entry from
+    ``~/.opendb/workspaces.json``. The ``.opendb/`` directory and all indexed
+    data remain untouched and the workspace can be re-added later.
+
+    Refuses to remove the currently-active workspace unless force=True.
+
+    Args:
+        params.id_or_root: Workspace id or root path.
+        params.force: Force removal even if the target is the active workspace.
+    """
+    return await opendb.remove_workspace(
+        id_or_root=params.id_or_root,
+        force=params.force,
     )

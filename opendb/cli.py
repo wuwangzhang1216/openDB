@@ -220,6 +220,114 @@ def serve(
 # Entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# workspace subcommand group
+# ---------------------------------------------------------------------------
+
+workspace_app = typer.Typer(
+    name="workspace",
+    help="Manage the global workspace registry (list / add / use / remove)",
+)
+app.add_typer(workspace_app, name="workspace")
+
+
+def _print_entry(w: dict, prefix: str = "") -> None:
+    marker = "* " if w.get("active") else "  "
+    typer.echo(
+        f"{prefix}{marker}[{w.get('id','?')}] "
+        f"{w.get('name','?'):<20} {w.get('root','?')}"
+    )
+
+
+@workspace_app.command("list")
+def workspace_list() -> None:
+    """List all registered workspaces."""
+    from opendb_core.services import workspace_service
+
+    result = _run(workspace_service.list_workspaces())
+    workspaces = result.get("workspaces", [])
+    if not workspaces:
+        typer.echo("No workspaces registered. Use `opendb workspace add PATH` to add one.")
+        return
+    active = next((w for w in workspaces if w.get("active")), None)
+    if active:
+        typer.echo(f"Active: [{active['id']}] {active['name']}  ({active['root']})")
+        typer.echo("")
+    typer.echo(f"Known workspaces ({len(workspaces)}):")
+    for w in workspaces:
+        _print_entry(w, prefix="  ")
+
+
+@workspace_app.command("add")
+def workspace_add(
+    path: Path = typer.Argument(..., help="Workspace root directory"),
+    name: str = typer.Option(None, "--name", "-n", help="Friendly name"),
+    use: bool = typer.Option(False, "--use", help="Also switch to this workspace"),
+) -> None:
+    """Register a workspace (creates .opendb/ if missing)."""
+    from opendb_core.services import workspace_service
+
+    try:
+        result = _run(
+            workspace_service.add_workspace(str(path), name=name, switch=use)
+        )
+    except workspace_service.WorkspaceRootMissing as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    typer.echo(f"Registered: [{result['id']}] {result['name']}  ({result['root']})")
+    if use:
+        typer.echo("Set as active workspace.")
+
+
+@workspace_app.command("use")
+def workspace_use(
+    id_or_path: str = typer.Argument(..., help="Workspace id or root path"),
+) -> None:
+    """Switch the active workspace."""
+    from opendb_core.services import workspace_service
+
+    try:
+        result = _run(workspace_service.switch_workspace(id_or_path))
+    except workspace_service.WorkspaceNotFound as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    typer.echo(f"Switched to: [{result['id']}] {result['name']}  ({result['root']})")
+
+
+@workspace_app.command("current")
+def workspace_current() -> None:
+    """Show the currently active workspace."""
+    from opendb_core.services import workspace_service
+
+    result = _run(workspace_service.current_workspace())
+    if result is None:
+        typer.echo("(no active workspace)")
+        return
+    typer.echo(f"Active: [{result['id']}] {result['name']}")
+    typer.echo(f"  root: {result['root']}")
+    typer.echo(f"  backend: {result.get('backend', 'sqlite')}")
+    typer.echo(f"  last used: {result.get('last_used_at', '?')}")
+
+
+@workspace_app.command("remove")
+def workspace_remove(
+    id_or_path: str = typer.Argument(..., help="Workspace id or root path"),
+    force: bool = typer.Option(False, "--force", help="Remove even if active"),
+) -> None:
+    """Unregister a workspace (does not delete files)."""
+    from opendb_core.services import workspace_service
+
+    try:
+        result = _run(workspace_service.remove_workspace(id_or_path, force=force))
+    except workspace_service.WorkspaceNotFound as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    typer.echo(f"Removed: [{result.get('id','?')}] {result.get('name','')}")
+
+
 def main() -> None:
     app()
 

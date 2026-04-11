@@ -138,3 +138,53 @@ class MemoryForgetInput(BaseModel):
     memory_type: str | None = Field(
         None, description="Filter by type when deleting by query"
     )
+
+
+# ------------------------------------------------------------------
+# Workspace management
+# ------------------------------------------------------------------
+
+
+class ListWorkspacesInput(BaseModel):
+    """Input for listing all registered workspaces (no parameters)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CurrentWorkspaceInput(BaseModel):
+    """Input for querying the currently active workspace (no parameters)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class UseWorkspaceInput(BaseModel):
+    """Input for switching the active workspace."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    id_or_root: str = Field(
+        ...,
+        description="Workspace id (e.g. 'a3f2b1c8') or absolute root path",
+        min_length=1,
+    )
+
+
+class AddWorkspaceInput(BaseModel):
+    """Input for registering a new workspace."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    root: str = Field(..., description="Absolute path to workspace root", min_length=1)
+    name: str | None = Field(None, description="Friendly name (defaults to directory basename)")
+    switch: bool = Field(False, description="Also make this the active workspace")
+
+
+class RemoveWorkspaceInput(BaseModel):
+    """Input for unregistering a workspace."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    id_or_root: str = Field(..., description="Workspace id or root path", min_length=1)
+    force: bool = Field(
+        False, description="Force removal even if the workspace is currently active"
+    )

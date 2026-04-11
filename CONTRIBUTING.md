@@ -39,13 +39,15 @@ git checkout -b feature/your-feature-name
 pytest
 ```
 
-4. Commit your changes with a clear message:
+4. Add an entry to [`CHANGELOG.md`](CHANGELOG.md) under the `## [Unreleased]` section if your change is user-visible (new feature, API change, bug fix, breaking change). Use the `Added` / `Changed` / `Fixed` / `Removed` / `Deprecated` / `Security` categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Internal refactors and docs-only tweaks don't need an entry.
+
+5. Commit your changes with a clear message:
 
 ```bash
 git commit -m "Add: brief description of the change"
 ```
 
-5. Push to your fork and open a Pull Request.
+6. Push to your fork and open a Pull Request.
 
 ## Project Structure
 
@@ -77,6 +79,7 @@ benchmark/            # Performance benchmarks
 - Follow existing code style — no need for a linter config, just match what's there
 - Keep PRs focused — one feature or fix per PR
 - Add tests for new functionality
+- Update `CHANGELOG.md` under `## [Unreleased]` for any user-visible change
 
 ## Reporting Issues
 

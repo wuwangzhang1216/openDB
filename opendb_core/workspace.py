@@ -26,6 +26,38 @@ logger = logging.getLogger(__name__)
 _CONFIG_FILE = "config.json"
 _DB_FILE = "metadata.db"
 
+# Tracks whether parsers have been imported yet (idempotent registration).
+_parsers_registered = False
+
+
+def _ensure_parsers_registered() -> None:
+    """Import parser modules exactly once to register them with the registry."""
+    global _parsers_registered
+    if _parsers_registered:
+        return
+    import opendb_core.parsers.text      # noqa: F401
+    import opendb_core.parsers.pdf       # noqa: F401
+    import opendb_core.parsers.docx      # noqa: F401
+    import opendb_core.parsers.pptx      # noqa: F401
+    import opendb_core.parsers.spreadsheet  # noqa: F401
+    import opendb_core.parsers.image     # noqa: F401
+    _parsers_registered = True
+
+
+def apply_workspace_config(opendb_dir: Path, cfg: "WorkspaceConfig") -> None:
+    """Patch the global ``settings`` singleton to match *cfg*.
+
+    Shared between ``Workspace.init()`` and the runtime workspace-switch
+    code path so both apply config identically.
+    """
+    from opendb_core.config import settings
+    settings.file_storage_path = opendb_dir / "blobs"
+    settings.ocr_enabled = cfg.ocr_enabled
+    settings.ocr_languages = cfg.ocr_languages
+    settings.max_file_size = cfg.max_file_size_mb * 1024 * 1024
+    settings.index_exclude_patterns = cfg.index_exclude_patterns
+    settings.file_storage_path.mkdir(parents=True, exist_ok=True)
+
 
 @dataclass
 class WorkspaceConfig:
@@ -110,28 +142,16 @@ class Workspace:
 
         # Initialise and register the SQLite backend (keyed by db_path)
         from opendb_core.storage import init_backend
-        from opendb_core.config import settings
 
         db_path = self.opendb_dir / _DB_FILE
         self._backend_key = str(db_path)
         await init_backend("sqlite", db_path=db_path)
 
         # Patch settings to match workspace config
-        settings.file_storage_path = self.opendb_dir / "blobs"
-        settings.ocr_enabled = self.config.ocr_enabled
-        settings.ocr_languages = self.config.ocr_languages
-        settings.max_file_size = self.config.max_file_size_mb * 1024 * 1024
-        settings.index_exclude_patterns = self.config.index_exclude_patterns
+        apply_workspace_config(self.opendb_dir, self.config)
 
-        settings.file_storage_path.mkdir(parents=True, exist_ok=True)
-
-        # Register all parsers (the REST API does this via router imports; we must do it explicitly)
-        import opendb_core.parsers.text      # noqa: F401
-        import opendb_core.parsers.pdf       # noqa: F401
-        import opendb_core.parsers.docx      # noqa: F401
-        import opendb_core.parsers.pptx      # noqa: F401
-        import opendb_core.parsers.spreadsheet  # noqa: F401
-        import opendb_core.parsers.image     # noqa: F401
+        # Register all parsers (idempotent)
+        _ensure_parsers_registered()
 
         logger.info("Workspace initialised at %s", self.root)
 

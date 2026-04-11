@@ -209,10 +209,14 @@ async def get_info() -> str:
     by_status = data.get("by_status", {})
     by_type = data.get("by_type", [])
     recent = data.get("recent", [])
+    ws = data.get("workspace")
 
     total = sum(by_status.values())
     status_parts = [f"{s}: {c}" for s, c in sorted(by_status.items())]
-    lines_out = [f"Workspace: {total} files ({', '.join(status_parts)})"]
+    lines_out: list[str] = []
+    if ws:
+        lines_out.append(f"Active workspace: [{ws['id']}] {ws['name']}  ({ws['root']})")
+    lines_out.append(f"Workspace: {total} files ({', '.join(status_parts)})")
 
     if by_type:
         lines_out.append("")
@@ -335,6 +339,119 @@ async def memory_forget(
     deleted = data.get("deleted", 0)
     by = data.get("by", "?")
     return f"Deleted {deleted} memory/memories (by {by})"
+
+
+# ------------------------------------------------------------------
+# Workspace management
+# ------------------------------------------------------------------
+
+
+def _format_workspace_entry(w: dict, *, active_marker: bool = True) -> str:
+    """One-line summary of a workspace entry."""
+    marker = "* " if (active_marker and w.get("active")) else "  "
+    wid = w.get("id", "?")
+    name = w.get("name", "?")
+    root = w.get("root", "?")
+    last_used = w.get("last_used_at", "")
+    return f"{marker}[{wid}] {name:<20} {root}   (last used {last_used})"
+
+
+async def list_workspaces() -> str:
+    """Call GET /workspaces."""
+    client = await get_client()
+    response = await client.get("/workspaces")
+    if response.status_code != 200:
+        return _handle_error(response)
+
+    data = response.json()
+    workspaces = data.get("workspaces", [])
+    active_id = data.get("active_id")
+
+    if not workspaces:
+        return "No workspaces registered yet. Use opendb_add_workspace to register one."
+
+    lines: list[str] = []
+    active = next((w for w in workspaces if w.get("active")), None)
+    if active:
+        lines.append(
+            f"Active: [{active['id']}] {active['name']}  ({active['root']})"
+        )
+    else:
+        lines.append(f"Active: {active_id or '(none)'}")
+    lines.append("")
+    lines.append(f"Known workspaces ({len(workspaces)}):")
+    for w in workspaces:
+        lines.append(_format_workspace_entry(w))
+    return "\n".join(lines)
+
+
+async def current_workspace() -> str:
+    """Call GET /workspaces/active."""
+    client = await get_client()
+    response = await client.get("/workspaces/active")
+    if response.status_code != 200:
+        return _handle_error(response)
+    w = response.json()
+    return (
+        f"Active workspace: [{w['id']}] {w['name']}\n"
+        f"  root: {w['root']}\n"
+        f"  backend: {w.get('backend', 'sqlite')}\n"
+        f"  last used: {w.get('last_used_at', '?')}"
+    )
+
+
+async def use_workspace(id_or_root: str) -> str:
+    """Call PUT /workspaces/active."""
+    client = await get_client()
+    # Decide whether to send as id or root based on the argument shape.
+    body: dict = {}
+    if any(sep in id_or_root for sep in ("/", "\\", ":")):
+        body["root"] = id_or_root
+    else:
+        body["id"] = id_or_root
+    response = await client.put("/workspaces/active", json=body)
+    if response.status_code != 200:
+        return _handle_error(response)
+    w = response.json()
+    return (
+        f"Switched to workspace [{w['id']}] {w['name']}  ({w['root']})"
+    )
+
+
+async def add_workspace(root: str, name: str | None = None, switch: bool = False) -> str:
+    """Call POST /workspaces."""
+    client = await get_client()
+    body: dict = {"root": root, "switch": switch}
+    if name:
+        body["name"] = name
+    response = await client.post("/workspaces", json=body)
+    if response.status_code != 200:
+        return _handle_error(response)
+    w = response.json()
+    msg = f"Registered workspace [{w['id']}] {w['name']}  ({w['root']})"
+    if switch and w.get("active"):
+        msg += "\nAlso set as active workspace."
+    return msg
+
+
+async def remove_workspace(id_or_root: str, force: bool = False) -> str:
+    """Call DELETE /workspaces/{id}. Accepts either id or root path."""
+    client = await get_client()
+    # If a path was supplied we must first resolve it to an id.
+    target_id = id_or_root
+    if any(sep in id_or_root for sep in ("/", "\\", ":")):
+        list_resp = await client.get("/workspaces")
+        if list_resp.status_code == 200:
+            for w in list_resp.json().get("workspaces", []):
+                if w.get("root") == id_or_root.replace("\\", "/"):
+                    target_id = w["id"]
+                    break
+    params = {"force": "true"} if force else {}
+    response = await client.delete(f"/workspaces/{target_id}", params=params)
+    if response.status_code != 200:
+        return _handle_error(response)
+    w = response.json()
+    return f"Removed workspace [{w.get('id', target_id)}] {w.get('name', '')}"
 
 
 async def glob_files(pattern: str, path: str | None = None) -> str:

@@ -29,7 +29,7 @@ opendb index ./my_workspace
 opendb serve-mcp
 ```
 
-That's it. Your agent now has 7 MCP tools — read any file format, search across documents and code, and store/recall persistent memories. Works with every major agent framework out of the box.
+That's it. Your agent now has 12 MCP tools — read any file format, search across documents and code, store/recall persistent memories, and switch between multiple workspaces on the fly. Works with every major agent framework out of the box.
 
 ## LongMemEval Benchmark — 93.6%
 
@@ -342,7 +342,7 @@ FTS quality **improves with scale** while RAG degrades from distractor noise. Se
 
 ## MCP Tools
 
-7 tools, auto-discovered by any MCP-compatible agent:
+12 tools, auto-discovered by any MCP-compatible agent:
 
 ### `opendb_info` — Workspace overview
 
@@ -412,6 +412,27 @@ opendb_memory_forget(memory_id="abc-123-def")
 opendb_memory_forget(query="outdated preferences")
 ```
 
+### Workspace management — switch between projects on the fly
+
+An agent working across multiple projects can list, add, and switch workspaces at runtime — **no server restart, sub-millisecond switching** after first open. The backend keeps each workspace's SQLite connection warm, so switching back and forth is just a pointer flip.
+
+```
+opendb_list_workspaces()
+-> Active: [a3f2b1c8] openDB  (D:/work/openDB)
+   Known workspaces (3):
+   * [a3f2b1c8] openDB        D:/work/openDB       (last used 2026-04-10 14:22)
+     [7d9e0422] my-notes      C:/Users/me/notes    (last used 2026-04-09 10:11)
+     [e18a9f03] client-docs   D:/clients/acme      (last used 2026-04-08 17:45)
+
+opendb_use_workspace(id_or_root="7d9e0422")         # Switch by id
+opendb_use_workspace(id_or_root="D:/clients/acme")  # ...or by path
+opendb_add_workspace(root="./new_project", switch=True)
+opendb_current_workspace()
+opendb_remove_workspace(id_or_root="e18a9f03")
+```
+
+Workspaces are persisted in `~/.opendb/workspaces.json` (override with `FILEDB_STATE_DIR`). Every `opendb_read` / `opendb_search` / `opendb_glob` / `opendb_memory_*` call targets the currently-active workspace.
+
 ## Agent Memory
 
 OpenDB doubles as a **long-term memory store** for AI agents — persistent across sessions, ranked by relevance and recency, with pinned priorities.
@@ -478,7 +499,8 @@ Search time scales **sublinearly** (10x docs -> 1.7x latency).
 ## Key Features
 
 - **3-line setup** — `pip install`, `index`, `serve-mcp` — works with every agent framework
-- **7 MCP tools** — `read`, `search`, `glob`, `info` for files + `memory_store`, `memory_recall`, `memory_forget` for memory
+- **12 MCP tools** — `read`, `search`, `glob`, `info` for files; `memory_store`, `memory_recall`, `memory_forget` for memory; `list_workspaces`, `use_workspace`, `add_workspace`, `remove_workspace`, `current_workspace` for multi-project workspace switching
+- **Runtime workspace switching** — agents can list/add/switch workspaces at runtime with no server restart; already-opened workspaces switch in sub-millisecond
 - **93.6% LongMemEval** — #3 on the leaderboard with a cheap model and zero retrieval infrastructure
 - **100% R@5 retrieval** — Perfect memory recall, 1.1ms median latency, zero embedding API calls
 - **Dual-mode** — Embedded (SQLite, zero-config) or Server (PostgreSQL, shared access); same API
@@ -502,6 +524,9 @@ OpenDB also exposes a full HTTP API. Run with `opendb serve` (embedded) or `dock
 | `/memory` | `POST`/`GET` | Store or list memories |
 | `/memory/recall` | `POST` | Search memories with ranking |
 | `/memory/forget` | `POST` | Delete memories |
+| `/workspaces` | `GET`/`POST` | List or register workspaces |
+| `/workspaces/active` | `GET`/`PUT` | Get or switch active workspace |
+| `/workspaces/{id}` | `DELETE` | Unregister a workspace |
 | `/health` | `GET` | Health check |
 
 ## Configuration
@@ -516,6 +541,7 @@ Environment variables (`FILEDB_` prefix):
 | `FILEDB_OCR_LANGUAGES` | `eng+chi_sim+chi_tra` | OCR languages |
 | `FILEDB_MAX_FILE_SIZE` | `104857600` | Max file size (100MB) |
 | `FILEDB_INDEX_EXCLUDE_PATTERNS` | `[]` | Exclude patterns for indexing |
+| `FILEDB_STATE_DIR` | `~/.opendb` | Location of the global workspace registry (`workspaces.json`) |
 | `OPENDB_URL` | `http://localhost:8000` | MCP server -> REST API URL |
 
 ## Contributing
