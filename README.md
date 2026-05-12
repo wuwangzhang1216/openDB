@@ -31,6 +31,13 @@ opendb serve-mcp
 
 That's it. Your agent now has 12 MCP tools — read any file format, search across documents and code, store/recall persistent memories, and switch between multiple workspaces on the fly. Works with every major agent framework out of the box.
 
+## Agent Usage Protocol
+
+If you are wiring OpenDB into an AI agent, start with [AGENTS.md](AGENTS.md).
+It tells agents to check local files and memories before external search, write
+memories carefully, and keep OpenDB's runtime simple. For the fuller workflow,
+see [docs/agent-protocol.md](docs/agent-protocol.md).
+
 ## LongMemEval Benchmark — 93.6%
 
 OpenDB achieves **93.6% E2E accuracy** on [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025), the standard benchmark for AI agent long-term memory. 500 questions, 6 categories, LLM-as-judge evaluation.
