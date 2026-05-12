@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 
 from opendb_core.storage import get_backend
@@ -60,7 +61,8 @@ async def recall_memories(
         raise ValueError(f"Invalid memory_type filter: '{memory_type}'")
 
     backend = get_backend()
-    return await backend.recall_memories(
+    start = time.perf_counter()
+    result = await backend.recall_memories(
         query=query,
         memory_type=memory_type,
         tags=tags,
@@ -68,6 +70,25 @@ async def recall_memories(
         offset=offset,
         pinned_only=pinned_only,
     )
+    from opendb_core.services.eval_service import capture_eval, now_ms
+
+    await capture_eval(
+        tool_name="memory_recall",
+        query=query,
+        result_ids=[
+            str(r.get("memory_id")) for r in result.get("results", []) if r.get("memory_id")
+        ],
+        result_count=int(result.get("total", 0)),
+        latency_ms=now_ms(start),
+        metadata={
+            "memory_type": memory_type,
+            "tags": tags or [],
+            "limit": limit,
+            "offset": offset,
+            "pinned_only": pinned_only,
+        },
+    )
+    return result
 
 
 async def forget_memory(

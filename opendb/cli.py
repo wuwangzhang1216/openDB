@@ -231,6 +231,54 @@ workspace_app = typer.Typer(
 app.add_typer(workspace_app, name="workspace")
 
 
+# ---------------------------------------------------------------------------
+# eval subcommand group
+# ---------------------------------------------------------------------------
+
+eval_app = typer.Typer(
+    name="eval",
+    help="Export opt-in eval captures from an embedded workspace",
+)
+app.add_typer(eval_app, name="eval")
+
+
+@eval_app.command("export")
+def eval_export(
+    workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write NDJSON to a file"),
+    limit: int = typer.Option(1000, help="Maximum rows to export", ge=1),
+    tool: str | None = typer.Option(
+        None,
+        "--tool",
+        help="Filter by tool: search or memory_recall",
+    ),
+) -> None:
+    """Export captured search/recall traffic as NDJSON.
+
+    Capture is opt-in via FILEDB_EVAL_CAPTURE_ENABLED=true. Export works even
+    when capture is currently disabled; it reads whatever has already been
+    recorded in the workspace database.
+    """
+    if tool and tool not in {"search", "memory_recall"}:
+        typer.echo("Error: --tool must be 'search' or 'memory_recall'", err=True)
+        raise typer.Exit(code=1)
+
+    from opendb_core.workspace import Workspace
+    from opendb_core.services.eval_service import export_eval_captures
+
+    ws = Workspace.open(workspace)
+
+    async def _export() -> int:
+        await ws.init()
+        count = await export_eval_captures(limit=limit, tool_name=tool, output=output)
+        await ws.close()
+        return count
+
+    count = _run(_export())
+    if output:
+        typer.echo(f"Exported {count} eval capture row(s) to {output}")
+
+
 def _print_entry(w: dict, prefix: str = "") -> None:
     marker = "* " if w.get("active") else "  "
     typer.echo(

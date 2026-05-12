@@ -114,3 +114,38 @@ CREATE INDEX idx_memories_jieba ON memories USING GIN(
 CREATE TRIGGER memories_updated
     BEFORE UPDATE ON memories
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ============================================================
+-- eval_captures: opt-in real query capture for offline evals
+-- ============================================================
+CREATE TABLE eval_captures (
+    id            BIGSERIAL PRIMARY KEY,
+    tool_name     TEXT NOT NULL CHECK (tool_name IN ('search', 'memory_recall')),
+    query         TEXT NOT NULL CHECK (length(query) <= 51200),
+    result_ids    JSONB NOT NULL DEFAULT '[]'::jsonb,
+    result_count  INTEGER NOT NULL DEFAULT 0,
+    latency_ms    INTEGER NOT NULL DEFAULT 0,
+    metadata      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_eval_captures_created ON eval_captures(created_at DESC);
+CREATE INDEX idx_eval_captures_tool ON eval_captures(tool_name);
+
+-- ============================================================
+-- file_links: deterministic lightweight link graph between indexed files
+-- ============================================================
+CREATE TABLE file_links (
+    id            BIGSERIAL PRIMARY KEY,
+    from_file_id  UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    to_file_id    UUID REFERENCES files(id) ON DELETE SET NULL,
+    target        TEXT NOT NULL,
+    link_type     TEXT NOT NULL DEFAULT 'reference',
+    context       TEXT NOT NULL DEFAULT '',
+    created_at    TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(from_file_id, target, link_type)
+);
+
+CREATE INDEX idx_file_links_from ON file_links(from_file_id);
+CREATE INDEX idx_file_links_to ON file_links(to_file_id);
+CREATE INDEX idx_file_links_target ON file_links(target);

@@ -233,3 +233,46 @@ class StorageBackend(Protocol):
     ) -> dict:
         """List memories with optional filters. Returns {total, memories[...]}."""
         ...
+
+    # ------------------------------------------------------------------
+    # Eval capture
+    # ------------------------------------------------------------------
+
+    async def log_eval_capture(
+        self,
+        *,
+        tool_name: str,
+        query: str,
+        result_ids: list[str],
+        result_count: int,
+        latency_ms: int,
+        metadata: dict,
+    ) -> None:
+        """Persist an opt-in eval capture row for search/recall traffic."""
+        ...
+
+    async def export_eval_captures(
+        self,
+        *,
+        limit: int = 1000,
+        tool_name: str | None = None,
+    ) -> list[dict]:
+        """Return recent eval capture rows for NDJSON export."""
+        ...
+
+    # ------------------------------------------------------------------
+    # File links
+    # ------------------------------------------------------------------
+
+    async def replace_file_links(
+        self,
+        *,
+        file_id: str,
+        links: list[dict],
+    ) -> int:
+        """Replace deterministic outbound links for a file. Returns row count."""
+        ...
+
+    async def get_backlink_counts(self, file_ids: list[str]) -> dict[str, int]:
+        """Return inbound link counts keyed by file_id."""
+        ...
