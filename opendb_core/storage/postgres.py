@@ -29,6 +29,7 @@ class PostgresBackend(PgMemoryMixin):
     async def init(self) -> None:
         """Run lightweight schema migrations (add columns if missing)."""
         await self._migrate_cjk_columns()
+        await self._migrate_eval_and_links()
 
     async def close(self) -> None:
         pass  # Pool lifecycle owned by app/database.py
@@ -97,6 +98,57 @@ class PostgresBackend(PgMemoryMixin):
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_memories_confidence "
                 "ON memories(confidence) WHERE confidence >= 0.3"
+            )
+
+    async def _migrate_eval_and_links(self) -> None:
+        """Create opt-in eval capture and lightweight file-link tables."""
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS eval_captures (
+                    id            BIGSERIAL PRIMARY KEY,
+                    tool_name     TEXT NOT NULL CHECK (tool_name IN ('search', 'memory_recall')),
+                    query         TEXT NOT NULL CHECK (length(query) <= 51200),
+                    result_ids    JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    result_count  INTEGER NOT NULL DEFAULT 0,
+                    latency_ms    INTEGER NOT NULL DEFAULT 0,
+                    metadata      JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_eval_captures_created "
+                "ON eval_captures(created_at DESC)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_eval_captures_tool "
+                "ON eval_captures(tool_name)"
+            )
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS file_links (
+                    id            BIGSERIAL PRIMARY KEY,
+                    from_file_id  UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+                    to_file_id    UUID REFERENCES files(id) ON DELETE SET NULL,
+                    target        TEXT NOT NULL,
+                    link_type     TEXT NOT NULL DEFAULT 'reference',
+                    context       TEXT NOT NULL DEFAULT '',
+                    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE(from_file_id, target, link_type)
+                )
+                """
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_file_links_from ON file_links(from_file_id)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_file_links_to ON file_links(to_file_id)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target)"
             )
 
     # ------------------------------------------------------------------
@@ -199,11 +251,20 @@ class PostgresBackend(PgMemoryMixin):
                         toc,
                     )
 
+                    from opendb_core.config import settings
+                    if settings.link_extraction_enabled:
+                        source_path = merged_metadata.get("source_path") or original_filename
+                        from opendb_core.utils.link_extractor import extract_file_links
+                        links = extract_file_links(full_text, source_path=source_path)
+                        await self._replace_file_links_unlocked(conn, str(file_uuid), links)
+
                     await conn.execute(
                         "UPDATE files SET status = 'ready', metadata = $2 WHERE id = $1",
                         file_uuid,
                         json.dumps(merged_metadata),
                     )
+                    if settings.link_extraction_enabled:
+                        await self._reconcile_links_to_file_unlocked(conn, str(file_uuid))
 
             except asyncpg.UniqueViolationError:
                 existing = await conn.fetchrow(
@@ -495,20 +556,33 @@ class PostgresBackend(PgMemoryMixin):
             rows = await conn.fetch(search_sql, *params)
             total = await conn.fetchval(count_sql, *params[:n])
 
+        results = [
+            {
+                "filename": r["filename"],
+                "file_id": str(r["file_id"]),
+                "page_number": r["page_number"],
+                "section_title": r["section_title"],
+                "highlight": r["highlight"] or "",
+                "relevance_score": float(r["relevance_score"]),
+                "updated_at": r["updated_at"].isoformat() + "Z" if r["updated_at"] else None,
+            }
+            for r in rows
+        ]
+        from opendb_core.config import settings
+        if settings.backlink_boost_enabled and results:
+            counts = await self.get_backlink_counts([r["file_id"] for r in results])
+            weight = max(0.0, settings.backlink_boost_weight)
+            for r in results:
+                count = counts.get(r["file_id"], 0)
+                if count:
+                    r["relevance_score"] *= 1.0 + weight * count
+            results.sort(key=lambda r: r["relevance_score"], reverse=True)
+        for r in results:
+            r["relevance_score"] = round(float(r["relevance_score"]), 3)
+
         return {
             "total": total,
-            "results": [
-                {
-                    "filename": r["filename"],
-                    "file_id": str(r["file_id"]),
-                    "page_number": r["page_number"],
-                    "section_title": r["section_title"],
-                    "highlight": r["highlight"] or "",
-                    "relevance_score": round(float(r["relevance_score"]), 3),
-                    "updated_at": r["updated_at"].isoformat() + "Z" if r["updated_at"] else None,
-                }
-                for r in rows
-            ],
+            "results": results,
         }
 
     # ------------------------------------------------------------------
@@ -673,6 +747,220 @@ class PostgresBackend(PgMemoryMixin):
     # ------------------------------------------------------------------
     # Agent Memory — see _pg_memory.py (PgMemoryMixin)
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Eval capture
+    # ------------------------------------------------------------------
+
+    async def log_eval_capture(
+        self,
+        *,
+        tool_name: str,
+        query: str,
+        result_ids: list[str],
+        result_count: int,
+        latency_ms: int,
+        metadata: dict,
+    ) -> None:
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO eval_captures
+                    (tool_name, query, result_ids, result_count, latency_ms, metadata)
+                VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb)
+                """,
+                tool_name,
+                query[:51200],
+                json.dumps(result_ids),
+                result_count,
+                latency_ms,
+                json.dumps(metadata),
+            )
+
+    async def export_eval_captures(
+        self,
+        *,
+        limit: int = 1000,
+        tool_name: str | None = None,
+    ) -> list[dict]:
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            if tool_name:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, tool_name, query, result_ids, result_count,
+                           latency_ms, metadata, created_at
+                    FROM eval_captures
+                    WHERE tool_name = $1
+                    ORDER BY id DESC
+                    LIMIT $2
+                    """,
+                    tool_name,
+                    limit,
+                )
+            else:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, tool_name, query, result_ids, result_count,
+                           latency_ms, metadata, created_at
+                    FROM eval_captures
+                    ORDER BY id DESC
+                    LIMIT $1
+                    """,
+                    limit,
+                )
+        exported = []
+        for r in rows:
+            result_ids = r["result_ids"]
+            if isinstance(result_ids, str):
+                result_ids = json.loads(result_ids)
+            metadata = r["metadata"]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+            exported.append({
+                "id": int(r["id"]),
+                "tool_name": r["tool_name"],
+                "query": r["query"],
+                "result_ids": result_ids,
+                "result_count": r["result_count"],
+                "latency_ms": r["latency_ms"],
+                "metadata": metadata,
+                "created_at": r["created_at"].isoformat() + "Z" if r["created_at"] else None,
+            })
+        return exported
+
+    # ------------------------------------------------------------------
+    # File links
+    # ------------------------------------------------------------------
+
+    async def _resolve_link_target_pg(self, conn, target: str) -> str | None:
+        row = await conn.fetchrow(
+            "SELECT id FROM files WHERE metadata->>'source_path' = $1 "
+            "AND status = 'ready'",
+            target,
+        )
+        if row:
+            return str(row["id"])
+
+        suffix = target.replace("\\", "/").lstrip("/")
+        row = await conn.fetchrow(
+            "SELECT id FROM files WHERE metadata->>'source_path' LIKE $1 "
+            "AND status = 'ready' ORDER BY length(metadata->>'source_path') LIMIT 1",
+            f"%/{suffix}",
+        )
+        if row:
+            return str(row["id"])
+
+        from pathlib import Path as _Path
+        basename = _Path(target).name
+        if basename:
+            row = await conn.fetchrow(
+                "SELECT id FROM files WHERE filename = $1 AND status = 'ready' LIMIT 1",
+                basename,
+            )
+            if row:
+                return str(row["id"])
+        return None
+
+    async def _replace_file_links_unlocked(self, conn, file_id: str, links: list[dict]) -> int:
+        import uuid as _uuid
+
+        file_uuid = _uuid.UUID(file_id)
+        await conn.execute("DELETE FROM file_links WHERE from_file_id = $1", file_uuid)
+        rows = []
+        for link in links:
+            target = str(link.get("target", "")).strip()
+            if not target:
+                continue
+            resolved = await self._resolve_link_target_pg(conn, target)
+            rows.append((
+                file_uuid,
+                _uuid.UUID(resolved) if resolved else None,
+                target,
+                str(link.get("link_type") or "reference"),
+                str(link.get("context") or "")[:500],
+            ))
+        if rows:
+            await conn.executemany(
+                """
+                INSERT INTO file_links
+                    (from_file_id, to_file_id, target, link_type, context)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (from_file_id, target, link_type) DO NOTHING
+                """,
+                rows,
+            )
+        return len(rows)
+
+    async def _reconcile_links_to_file_unlocked(self, conn, file_id: str) -> None:
+        import uuid as _uuid
+
+        file_uuid = _uuid.UUID(file_id)
+        row = await conn.fetchrow(
+            "SELECT filename, metadata FROM files WHERE id = $1 AND status = 'ready'",
+            file_uuid,
+        )
+        if not row:
+            return
+        metadata = row["metadata"]
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+        source_path = str((metadata or {}).get("source_path") or "").replace("\\", "/")
+        filename = row["filename"]
+        if not source_path and not filename:
+            return
+        await conn.execute(
+            """
+            UPDATE file_links
+            SET to_file_id = $1
+            WHERE to_file_id IS NULL
+              AND (
+                target = $2
+                OR ($2 != '' AND $2 LIKE '%' || CASE
+                    WHEN substr(target, 1, 1) = '/' THEN target
+                    ELSE '/' || target
+                  END)
+                OR target = $3
+              )
+            """,
+            file_uuid,
+            source_path,
+            filename,
+        )
+
+    async def replace_file_links(
+        self,
+        *,
+        file_id: str,
+        links: list[dict],
+    ) -> int:
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                return await self._replace_file_links_unlocked(conn, file_id, links)
+
+    async def get_backlink_counts(self, file_ids: list[str]) -> dict[str, int]:
+        import uuid as _uuid
+        ids = [_uuid.UUID(fid) for fid in sorted({fid for fid in file_ids if fid})]
+        if not ids:
+            return {}
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT to_file_id, COUNT(*) AS cnt
+                FROM file_links
+                WHERE to_file_id = ANY($1::uuid[])
+                GROUP BY to_file_id
+                """,
+                ids,
+            )
+        return {str(r["to_file_id"]): int(r["cnt"]) for r in rows}
 
 
 # ---------------------------------------------------------------------------

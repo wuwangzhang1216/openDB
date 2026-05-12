@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     memory_stability_days: float = 30.0  # FSRS stability: days for confidence to drop to 0.9
     memory_confidence_threshold: float = 0.3  # below this, memory fades out of recall
 
+    # Evaluation capture (opt-in): records real search/recall traffic for offline analysis
+    eval_capture_enabled: bool = False
+
+    # Lightweight link graph. Links are indexed deterministically; backlink
+    # search boosting is opt-in so default ranking stays unchanged.
+    link_extraction_enabled: bool = True
+    backlink_boost_enabled: bool = False
+    backlink_boost_weight: float = 0.05
+
     # Authentication (optional — if set, all requests require X-API-Key header)
     auth_api_key: str = ""
 

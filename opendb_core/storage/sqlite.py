@@ -116,6 +116,43 @@ CREATE TRIGGER IF NOT EXISTS memories_updated AFTER UPDATE ON memories
 BEGIN
     UPDATE memories SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = new.id;
 END;
+
+-- -----------------------------------------------------------------
+-- Eval capture (opt-in)
+-- -----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS eval_captures (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool_name     TEXT NOT NULL CHECK (tool_name IN ('search', 'memory_recall')),
+    query         TEXT NOT NULL CHECK (length(query) <= 51200),
+    result_ids    TEXT NOT NULL DEFAULT '[]',
+    result_count  INTEGER NOT NULL DEFAULT 0,
+    latency_ms    INTEGER NOT NULL DEFAULT 0,
+    metadata      TEXT NOT NULL DEFAULT '{}',
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_eval_captures_created
+    ON eval_captures(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_eval_captures_tool
+    ON eval_captures(tool_name);
+
+-- -----------------------------------------------------------------
+-- Lightweight file links
+-- -----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS file_links (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_file_id  TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    to_file_id    TEXT REFERENCES files(id) ON DELETE SET NULL,
+    target        TEXT NOT NULL,
+    link_type     TEXT NOT NULL DEFAULT 'reference',
+    context       TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    UNIQUE(from_file_id, target, link_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_links_from ON file_links(from_file_id);
+CREATE INDEX IF NOT EXISTS idx_file_links_to ON file_links(to_file_id);
+CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target);
 """
 
 
@@ -345,10 +382,19 @@ class SQLiteBackend(SQLiteMemoryMixin):
                     ),
                 )
 
+                from opendb_core.config import settings
+                if settings.link_extraction_enabled:
+                    source_path = merged_metadata.get("source_path") or original_filename
+                    from opendb_core.utils.link_extractor import extract_file_links
+                    links = extract_file_links(full_text, source_path=source_path)
+                    await self._replace_file_links_unlocked(file_id, links)
+
                 await self._db.execute(
                     "UPDATE files SET status = 'ready', metadata = ? WHERE id = ?",
                     (json.dumps(merged_metadata), file_id),
                 )
+                if settings.link_extraction_enabled:
+                    await self._reconcile_links_to_file_unlocked(file_id)
                 await self._db.commit()
 
             except aiosqlite.IntegrityError as exc:
@@ -582,6 +628,7 @@ class SQLiteBackend(SQLiteMemoryMixin):
 
         results = []
         for r in rows:
+            base_score = abs(float(r["rank"]))
             results.append(
                 {
                     "filename": r["filename"],
@@ -589,10 +636,21 @@ class SQLiteBackend(SQLiteMemoryMixin):
                     "page_number": r["page_number"],
                     "section_title": r["section_title"],
                     "highlight": build_highlight(r["text"], query),
-                    "relevance_score": round(abs(float(r["rank"])), 3),
+                    "relevance_score": base_score,
                     "updated_at": r["updated_at"],
                 }
             )
+        from opendb_core.config import settings
+        if settings.backlink_boost_enabled and results:
+            counts = await self.get_backlink_counts([r["file_id"] for r in results])
+            weight = max(0.0, settings.backlink_boost_weight)
+            for r in results:
+                count = counts.get(r["file_id"], 0)
+                if count:
+                    r["relevance_score"] *= 1.0 + weight * count
+            results.sort(key=lambda r: r["relevance_score"], reverse=True)
+        for r in results:
+            r["relevance_score"] = round(float(r["relevance_score"]), 3)
         return {"total": total, "results": results}
 
     # ------------------------------------------------------------------
@@ -754,4 +812,190 @@ class SQLiteBackend(SQLiteMemoryMixin):
     # Agent Memory — see _sqlite_memory.py (SQLiteMemoryMixin)
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Eval capture
+    # ------------------------------------------------------------------
 
+    async def log_eval_capture(
+        self,
+        *,
+        tool_name: str,
+        query: str,
+        result_ids: list[str],
+        result_count: int,
+        latency_ms: int,
+        metadata: dict,
+    ) -> None:
+        await self._db.execute(
+            """
+            INSERT INTO eval_captures
+                (tool_name, query, result_ids, result_count, latency_ms, metadata)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tool_name,
+                query[:51200],
+                json.dumps(result_ids),
+                result_count,
+                latency_ms,
+                json.dumps(metadata),
+            ),
+        )
+        await self._db.commit()
+
+    async def export_eval_captures(
+        self,
+        *,
+        limit: int = 1000,
+        tool_name: str | None = None,
+    ) -> list[dict]:
+        conditions = []
+        params: list = []
+        if tool_name:
+            conditions.append("tool_name = ?")
+            params.append(tool_name)
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        params.append(limit)
+        async with self._db.execute(
+            f"""
+            SELECT id, tool_name, query, result_ids, result_count,
+                   latency_ms, metadata, created_at
+            FROM eval_captures
+            {where}
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            params,
+        ) as cur:
+            rows = await cur.fetchall()
+        return [
+            {
+                "id": r["id"],
+                "tool_name": r["tool_name"],
+                "query": r["query"],
+                "result_ids": json.loads(r["result_ids"]) if r["result_ids"] else [],
+                "result_count": r["result_count"],
+                "latency_ms": r["latency_ms"],
+                "metadata": json.loads(r["metadata"]) if r["metadata"] else {},
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # File links
+    # ------------------------------------------------------------------
+
+    async def _resolve_link_target(self, target: str) -> str | None:
+        async with self._db.execute(
+            "SELECT id FROM files WHERE json_extract(metadata, '$.source_path') = ? "
+            "AND status = 'ready'",
+            (target,),
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            return row["id"]
+
+        suffix = target.replace("\\", "/").lstrip("/")
+        async with self._db.execute(
+            "SELECT id FROM files WHERE json_extract(metadata, '$.source_path') LIKE ? "
+            "AND status = 'ready' ORDER BY length(json_extract(metadata, '$.source_path')) LIMIT 1",
+            (f"%/{suffix}",),
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            return row["id"]
+
+        basename = Path(target).name
+        if basename:
+            async with self._db.execute(
+                "SELECT id FROM files WHERE filename = ? AND status = 'ready' LIMIT 1",
+                (basename,),
+            ) as cur:
+                row = await cur.fetchone()
+            if row:
+                return row["id"]
+        return None
+
+    async def _replace_file_links_unlocked(self, file_id: str, links: list[dict]) -> int:
+        await self._db.execute("DELETE FROM file_links WHERE from_file_id = ?", (file_id,))
+        rows = []
+        for link in links:
+            target = str(link.get("target", "")).strip()
+            if not target:
+                continue
+            rows.append((
+                file_id,
+                await self._resolve_link_target(target),
+                target,
+                str(link.get("link_type") or "reference"),
+                str(link.get("context") or "")[:500],
+            ))
+        if rows:
+            await self._db.executemany(
+                """
+                INSERT OR IGNORE INTO file_links
+                    (from_file_id, to_file_id, target, link_type, context)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+        return len(rows)
+
+    async def _reconcile_links_to_file_unlocked(self, file_id: str) -> None:
+        async with self._db.execute(
+            "SELECT filename, metadata FROM files WHERE id = ? AND status = 'ready'",
+            (file_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        if not row:
+            return
+        metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+        source_path = str(metadata.get("source_path") or "").replace("\\", "/")
+        filename = row["filename"]
+        if not source_path and not filename:
+            return
+        await self._db.execute(
+            """
+            UPDATE file_links
+            SET to_file_id = ?
+            WHERE to_file_id IS NULL
+              AND (
+                target = ?
+                OR (? != '' AND ? LIKE '%' || CASE
+                    WHEN substr(target, 1, 1) = '/' THEN target
+                    ELSE '/' || target
+                  END)
+                OR target = ?
+              )
+            """,
+            (file_id, source_path, source_path, source_path, filename),
+        )
+
+    async def replace_file_links(
+        self,
+        *,
+        file_id: str,
+        links: list[dict],
+    ) -> int:
+        async with self._write_lock:
+            count = await self._replace_file_links_unlocked(file_id, links)
+            await self._db.commit()
+        return count
+
+    async def get_backlink_counts(self, file_ids: list[str]) -> dict[str, int]:
+        ids = sorted({fid for fid in file_ids if fid})
+        if not ids:
+            return {}
+        placeholders = ",".join("?" for _ in ids)
+        async with self._db.execute(
+            f"""
+            SELECT to_file_id, COUNT(*) AS cnt
+            FROM file_links
+            WHERE to_file_id IN ({placeholders})
+            GROUP BY to_file_id
+            """,
+            ids,
+        ) as cur:
+            rows = await cur.fetchall()
+        return {r["to_file_id"]: int(r["cnt"]) for r in rows}
