@@ -291,6 +291,8 @@ async def memory_recall(
         body["memory_type"] = memory_type
     if tags:
         body["tags"] = tags
+    # Pinned-only recall skips the FTS path on the server and returns the
+    # startup-critical memory set directly.
     if pinned_only:
         body["pinned_only"] = True
 

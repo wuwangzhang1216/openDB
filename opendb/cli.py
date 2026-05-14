@@ -213,6 +213,7 @@ def serve(
     settings.opendb_dir = workspace.resolve() / ".opendb"
 
     typer.echo(f"Starting OpenDB HTTP server (embedded) at http://{host}:{port}")
+    # Keep the CLI entrypoint aligned with the current FastAPI app module.
     uvicorn.run("opendb_core.main:app", host=host, port=port, reload=False)
 
 

@@ -54,6 +54,8 @@ class _FakeHTTPXModule(types.ModuleType):
 
 class CliServeRegressionTest(unittest.TestCase):
     def test_serve_uses_opendb_core_main_entrypoint(self) -> None:
+        # Stub the optional runtime deps so the test can assert the uvicorn
+        # target without importing the full application stack.
         fake_typer = _FakeTyperModule("typer")
         fake_uvicorn_calls: list[tuple[object, str, int, bool]] = []
         fake_uvicorn = types.ModuleType("uvicorn")
@@ -92,6 +94,8 @@ class CliServeRegressionTest(unittest.TestCase):
 
 class MCPPinnedRecallRegressionTest(unittest.IsolatedAsyncioTestCase):
     async def test_memory_recall_accepts_and_forwards_pinned_only(self) -> None:
+        # Keep this test at the client boundary so it verifies request shaping
+        # without depending on a live FastAPI server.
         fake_httpx = _FakeHTTPXModule("httpx")
 
         class FakeResponse:
@@ -175,6 +179,8 @@ class WorkspaceRemovalRegressionTest(unittest.IsolatedAsyncioTestCase):
             storage_mod._backends.clear()
             storage_mod._active_key = None
 
+            # Patch the storage layer so the test can focus on the registry and
+            # active-workspace handoff logic instead of SQLite I/O.
             with patch.object(workspace_service, "apply_workspace_config", side_effect=fake_apply_workspace_config), \
                  patch.object(workspace_service, "_ensure_parsers_registered", return_value=None), \
                  patch.object(storage_mod, "init_backend", side_effect=fake_init_backend), \

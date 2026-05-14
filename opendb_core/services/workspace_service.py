@@ -151,6 +151,8 @@ async def remove_workspace(id_or_root: str, force: bool = False) -> dict:
     If ``force=True`` and the target is active, the backend is closed and
     the next-most-recent workspace becomes active (if any).
     """
+    # Resolve the successor workspace after the registry mutation, then switch
+    # outside the lock so we do not recurse while still holding it.
     next_active_id: str | None = None
 
     async with _switch_lock:
