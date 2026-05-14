@@ -242,6 +242,10 @@ class Workspace:
 
         *source* tracks provenance: ``'user_explicit'``, ``'ai_inference'``,
         ``'tool_extraction'``, or ``'unknown'``.
+
+        Use ``metadata["evidence"]`` for drill-down pointers when the memory
+        comes from a file or tool result, for example
+        ``{"file": "docs/spec.md", "lines": "10-20", "tool": "opendb_read"}``.
         """
         from opendb_core.services.memory_service import store_memory
         return await store_memory(

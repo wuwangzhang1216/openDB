@@ -14,6 +14,7 @@ from opendb_core.storage.shared import (
     content_token_set,
     has_recency_intent,
     jaccard_similarity,
+    passes_memory_query_gate,
 )
 
 logger = logging.getLogger(__name__)
@@ -299,6 +300,12 @@ class PgMemoryMixin:
                 "_age_days": eff_age,
             })
 
+        scored = [
+            s for s in scored
+            if passes_memory_query_gate(query, str(s["content"]))
+        ]
+        total = len(scored)
+
         # Recency tiebreaker
         if len(scored) >= 2:
             max_score = max(s["score"] for s in scored)
@@ -311,7 +318,7 @@ class PgMemoryMixin:
         scored.sort(key=lambda x: x["score"], reverse=True)
         for s in scored:
             s.pop("_age_days", None)
-            s["score"] = round(s["score"], 4)
+            s["score"] = float(f"{s['score']:.6g}")
         results = scored[offset : offset + limit]
 
         # Recall reinforcement

@@ -18,6 +18,7 @@ from opendb_core.storage.shared import (
     escape_fts5,
     has_recency_intent,
     jaccard_similarity,
+    passes_memory_query_gate,
 )
 
 logger = logging.getLogger(__name__)
@@ -334,6 +335,12 @@ class SQLiteMemoryMixin:
                 "_age_days": eff_age,
             })
 
+        scored = [
+            s for s in scored
+            if passes_memory_query_gate(query, str(s["content"]))
+        ]
+        total = len(scored)
+
         # Recency tiebreaker: when FTS scores cluster, boost newer memories
         if len(scored) >= 2:
             max_score = max(s["score"] for s in scored)
@@ -348,7 +355,7 @@ class SQLiteMemoryMixin:
         # Strip internal field and round final scores before returning
         for s in scored:
             s.pop("_age_days", None)
-            s["score"] = round(s["score"], 4)
+            s["score"] = float(f"{s['score']:.6g}")
         results = scored[offset : offset + limit]
 
         # Recall reinforcement: bump confidence for returned memories

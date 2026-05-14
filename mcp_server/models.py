@@ -100,7 +100,11 @@ class MemoryStoreInput(BaseModel):
         default_factory=list, description="Tags for categorization"
     )
     metadata: dict = Field(
-        default_factory=dict, description="Additional key-value metadata"
+        default_factory=dict,
+        description=(
+            "Additional metadata. Use metadata.evidence for drill-down pointers, "
+            "for example {'file': 'docs/spec.md', 'lines': '10-20', 'tool': 'opendb_read'}."
+        ),
     )
     source: str = Field(
         "unknown",
@@ -124,7 +128,11 @@ class MemoryRecallInput(BaseModel):
     )
     limit: int = Field(10, description="Max results", ge=1, le=50)
     pinned_only: bool = Field(
-        False, description="If true, return only pinned memories (no search needed)"
+        False,
+        description=(
+            "If true, return only pinned memories (no search needed), including "
+            "provenance and evidence metadata when available"
+        ),
     )
 
 

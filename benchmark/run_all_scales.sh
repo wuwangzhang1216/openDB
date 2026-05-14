@@ -15,7 +15,7 @@ for SCALE in small medium large; do
     python -c "from opendb.cli import app; import sys; sys.argv=['opendb','index','$WS','-w','$WS']; app()"
     
     # Start server
-    FILEDB_BACKEND=sqlite FILEDB_OPENDB_DIR="$WS/.opendb" python -c "import uvicorn; uvicorn.run('app.main:app', host='127.0.0.1', port=8000, log_level='warning')" &
+    FILEDB_BACKEND=sqlite FILEDB_OPENDB_DIR="$WS/.opendb" python -c "import uvicorn; uvicorn.run('opendb_core.main:app', host='127.0.0.1', port=8000, log_level='warning')" &
     SERVER_PID=$!
     sleep 4
     

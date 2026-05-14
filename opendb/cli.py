@@ -6,6 +6,7 @@ Usage::
     opendb index [PATH]         # index PATH (default: current dir)
     opendb search QUERY         # search indexed files
     opendb read FILENAME        # read a file
+    opendb memory profile       # render a white-box memory profile
     opendb serve-mcp            # start MCP server (stdio, embedded mode)
     opendb serve                # start HTTP+MCP server (embedded mode)
 
@@ -213,7 +214,7 @@ def serve(
     settings.opendb_dir = workspace.resolve() / ".opendb"
 
     typer.echo(f"Starting OpenDB HTTP server (embedded) at http://{host}:{port}")
-    uvicorn.run("app.main:app", host=host, port=port, reload=False)
+    uvicorn.run("opendb_core.main:app", host=host, port=port, reload=False)
 
 
 # ---------------------------------------------------------------------------
@@ -242,11 +243,22 @@ eval_app = typer.Typer(
 app.add_typer(eval_app, name="eval")
 
 
+# ---------------------------------------------------------------------------
+# memory subcommand group
+# ---------------------------------------------------------------------------
+
+memory_app = typer.Typer(
+    name="memory",
+    help="Inspect and export memories from an embedded workspace",
+)
+app.add_typer(memory_app, name="memory")
+
+
 @eval_app.command("export")
 def eval_export(
     workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
     output: Path | None = typer.Option(None, "--output", "-o", help="Write NDJSON to a file"),
-    limit: int = typer.Option(1000, help="Maximum rows to export", ge=1),
+    limit: int = typer.Option(1000, help="Maximum rows to export"),
     tool: str | None = typer.Option(
         None,
         "--tool",
@@ -259,6 +271,9 @@ def eval_export(
     when capture is currently disabled; it reads whatever has already been
     recorded in the workspace database.
     """
+    if limit < 1:
+        typer.echo("Error: --limit must be >= 1", err=True)
+        raise typer.Exit(code=1)
     if tool and tool not in {"search", "memory_recall"}:
         typer.echo("Error: --tool must be 'search' or 'memory_recall'", err=True)
         raise typer.Exit(code=1)
@@ -277,6 +292,53 @@ def eval_export(
     count = _run(_export())
     if output:
         typer.echo(f"Exported {count} eval capture row(s) to {output}")
+
+
+@memory_app.command("profile")
+def memory_profile(
+    workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Write Markdown to a file instead of stdout",
+    ),
+    limit: int = typer.Option(1000, help="Maximum memories to include"),
+) -> None:
+    """Render a white-box Markdown profile of stored memories.
+
+    The profile does not synthesize new facts. It groups existing memories and
+    keeps IDs, provenance, confidence, and evidence metadata visible for
+    verification.
+    """
+    if limit < 1:
+        typer.echo("Error: --limit must be >= 1", err=True)
+        raise typer.Exit(code=1)
+
+    from opendb_core.workspace import Workspace
+    from opendb_core.utils.memory_render import build_memory_profile
+
+    ws = Workspace.open(workspace)
+
+    async def _profile() -> dict:
+        await ws.init()
+        result = await ws.memory_list(limit=limit)
+        await ws.close()
+        return result
+
+    result = _run(_profile())
+    content = build_memory_profile(
+        result.get("memories", []),
+        total=result.get("total"),
+    )
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(content, encoding="utf-8")
+        typer.echo(f"Wrote memory profile to {output}")
+        return
+
+    typer.echo(content)
 
 
 def _print_entry(w: dict, prefix: str = "") -> None:

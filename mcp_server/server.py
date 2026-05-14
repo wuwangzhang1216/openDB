@@ -266,6 +266,16 @@ async def opendb_memory_store(params: MemoryStoreInput) -> str:
     - episodic: Past events, interaction outcomes, task results
     - procedural: Learned workflows, rules, patterns
 
+    Store only durable, context-free memories:
+    - Prefer one complete sentence that still makes sense outside this chat.
+    - Skip greetings, small talk, one-off commands, and task-local details.
+    - Use absolute dates for episodic memories when known.
+    - Merge strongly related details instead of storing fragments.
+
+    Put drill-down pointers in metadata.evidence when a memory comes from files
+    or tool output, e.g. {"file": "docs/spec.md", "lines": "10-20",
+    "tool": "opendb_read"}. Evidence may also be a list.
+
     Set pinned=true for critical facts that should always surface first in recall
     results (e.g. user identity, project context). Pinned memories get a 10x
     ranking boost and can be retrieved instantly with pinned_only=true in recall.
@@ -276,7 +286,8 @@ async def opendb_memory_store(params: MemoryStoreInput) -> str:
             - memory_type (str): 'semantic', 'episodic', or 'procedural'
             - pinned (bool): Pin this memory for priority retrieval (default: false)
             - tags (list[str]): Tags for categorization
-            - metadata (dict): Additional key-value metadata
+            - metadata (dict): Additional key-value metadata; use metadata.evidence for source file/tool pointers
+            - source (str): Provenance: user_explicit, ai_inference, tool_extraction, or unknown
 
     Returns:
         str: Confirmation with memory ID and type.
@@ -310,7 +321,10 @@ async def opendb_memory_recall(params: MemoryRecallInput) -> str:
     """Search and recall stored memories using full-text search.
 
     Results are ranked by a combination of relevance and recency — recent memories
-    score higher than older ones with the same keyword match.
+    score higher than older ones with the same keyword match. Output includes
+    provenance fields such as source, confidence, superseded_id, tags, and
+    metadata.evidence when available, so important memories can be verified with
+    opendb_read before being treated as fact.
 
     Args:
         params (MemoryRecallInput): Validated input parameters containing:
@@ -318,9 +332,10 @@ async def opendb_memory_recall(params: MemoryRecallInput) -> str:
             - memory_type (str, optional): Filter by type: episodic, semantic, procedural
             - tags (list[str], optional): Filter by tags
             - limit (int): Max results (default: 10)
+            - pinned_only (bool): Return pinned startup context without FTS
 
     Returns:
-        str: Formatted list of matching memories with scores, types, and timestamps.
+        str: Formatted memories with score, content, provenance, and evidence pointers.
 
     Examples:
         - Recall user preferences: query="user preferences"

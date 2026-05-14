@@ -28,12 +28,41 @@ Store a memory when it is likely to matter in a future session.
 - `episodic`: dated events, task outcomes, incidents, releases, meetings.
 - `procedural`: reusable workflows, repo-specific instructions, recurring fixes.
 
+Write memories as durable atoms, not transcripts:
+
+- Prefer one complete, context-free sentence over copied chat fragments.
+- Skip greetings, small talk, one-off commands, and task-local instructions.
+- Store preferences and constraints only when they sound stable beyond the
+  current turn.
+- Store episodic memories with absolute dates when they are known.
+- Merge strongly related facts into one memory instead of creating fragments.
+
 Use `source` honestly:
 
 - `user_explicit`: the user directly stated it should be remembered.
 - `ai_inference`: inferred from work, but not directly commanded.
 - `tool_extraction`: derived from files, tools, or benchmark runs.
 - `unknown`: fallback only when provenance is genuinely unclear.
+
+Use `metadata` for drill-down evidence. Prefer this shape when a memory comes
+from a file, tool result, or previous recall:
+
+```json
+{
+  "date": "2026-05-14",
+  "scene": "Release planning for OpenDB memory recall",
+  "evidence": {
+    "file": "docs/agent-protocol.md",
+    "lines": "23-52",
+    "tool": "opendb_read"
+  },
+  "source_message_ids": ["turn-123"]
+}
+```
+
+`metadata.evidence` may also be a list when several files or tool calls support
+the same memory. Keep evidence pointers small: file/path, page or line range,
+and the tool/query used to obtain it.
 
 Pin sparingly. Pinned memories are for context that should reliably win recall,
 such as project identity, durable user preferences, or critical constraints.
@@ -50,6 +79,26 @@ For repository or document research:
 3. Use `opendb_read` narrowly to inspect exact pages, lines, or sheets.
 4. Summarize with citations to file names, page numbers, or line numbers.
 5. Store only durable conclusions as memories, not every intermediate finding.
+6. When storing a conclusion, include evidence metadata that points back to the
+   exact file/page/line range when possible.
+
+## Memory Recall Output
+
+Recall results should be treated as a starting point, not unquestioned truth.
+Each result includes provenance fields when available:
+
+- `source`: where the memory came from.
+- `confidence`: current confidence after recall reinforcement and decay.
+- `superseded_id`: the memory this one replaced, when relevant.
+- `metadata.evidence`: a deterministic pointer back to files or tool outputs.
+
+For multi-term queries, OpenDB filters weak tail results that only match one
+broad token. Prefer specific recall queries with two or more meaningful terms
+when you want a narrow answer.
+
+If a recalled memory is important for the answer and evidence is available, use
+`opendb_read` to verify the cited file, page, or line range before relying on
+the memory.
 
 ## What Not To Add By Default
 
