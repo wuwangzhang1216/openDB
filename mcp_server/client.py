@@ -282,6 +282,7 @@ async def memory_recall(
     memory_type: str | None = None,
     tags: list[str] | None = None,
     limit: int = 10,
+    pinned_only: bool = False,
 ) -> str:
     """Call POST /memory/recall to search memories."""
     client = await get_client()
@@ -290,6 +291,8 @@ async def memory_recall(
         body["memory_type"] = memory_type
     if tags:
         body["tags"] = tags
+    if pinned_only:
+        body["pinned_only"] = True
 
     response = await client.post("/memory/recall", json=body)
     if response.status_code != 200:

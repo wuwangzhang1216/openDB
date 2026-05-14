@@ -213,7 +213,7 @@ def serve(
     settings.opendb_dir = workspace.resolve() / ".opendb"
 
     typer.echo(f"Starting OpenDB HTTP server (embedded) at http://{host}:{port}")
-    uvicorn.run("app.main:app", host=host, port=port, reload=False)
+    uvicorn.run("opendb_core.main:app", host=host, port=port, reload=False)
 
 
 # ---------------------------------------------------------------------------
