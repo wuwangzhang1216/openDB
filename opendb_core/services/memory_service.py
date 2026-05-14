@@ -60,16 +60,19 @@ async def recall_memories(
     if memory_type and memory_type not in VALID_MEMORY_TYPES:
         raise ValueError(f"Invalid memory_type filter: '{memory_type}'")
 
-    backend = get_backend()
     start = time.perf_counter()
-    result = await backend.recall_memories(
-        query=query,
-        memory_type=memory_type,
-        tags=tags,
-        limit=limit,
-        offset=offset,
-        pinned_only=pinned_only,
-    )
+    if not pinned_only and not query.strip():
+        result = {"total": 0, "results": []}
+    else:
+        backend = get_backend()
+        result = await backend.recall_memories(
+            query=query,
+            memory_type=memory_type,
+            tags=tags,
+            limit=limit,
+            offset=offset,
+            pinned_only=pinned_only,
+        )
     from opendb_core.services.eval_service import capture_eval, now_ms
 
     await capture_eval(

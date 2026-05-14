@@ -282,6 +282,7 @@ async def memory_recall(
     memory_type: str | None = None,
     tags: list[str] | None = None,
     limit: int = 10,
+    pinned_only: bool = False,
 ) -> str:
     """Call POST /memory/recall to search memories."""
     client = await get_client()
@@ -290,36 +291,17 @@ async def memory_recall(
         body["memory_type"] = memory_type
     if tags:
         body["tags"] = tags
+    if pinned_only:
+        body["pinned_only"] = True
 
     response = await client.post("/memory/recall", json=body)
     if response.status_code != 200:
         return _handle_error(response)
 
     data = response.json()
-    results = data.get("results", [])
-    total = data.get("total", 0)
+    from opendb_core.utils.memory_render import format_memory_recall_response
 
-    if not results:
-        return f"No memories found for '{query}'"
-
-    lines_out: list[str] = [f"Found {total} memories:"]
-    lines_out.append("")
-    for r in results:
-        mtype = r.get("memory_type", "?")
-        score = r.get("score", 0)
-        created = r.get("created_at", "?")
-        tags_str = ", ".join(r.get("tags", []))
-        header = f"  [{mtype}] (score: {score}, created: {created})"
-        if tags_str:
-            header += f" tags: {tags_str}"
-        lines_out.append(header)
-        # Show highlight if available, otherwise truncate content
-        highlight = r.get("highlight") or r.get("content", "")[:150]
-        lines_out.append(f"    {highlight}")
-        lines_out.append(f"    id: {r.get('memory_id', '?')}")
-        lines_out.append("")
-
-    return "\n".join(lines_out)
+    return format_memory_recall_response(data, query)
 
 
 async def memory_forget(

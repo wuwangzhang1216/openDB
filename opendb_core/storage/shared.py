@@ -58,6 +58,21 @@ def content_token_set(text: str) -> set[str]:
     }
 
 
+def passes_memory_query_gate(query: str, content: str) -> bool:
+    """Return whether a memory is specific enough for a recall query.
+
+    Memory recall uses OR-style FTS so agents can find partial natural-language
+    matches. The tradeoff is that broad domain words such as "memory" can pull
+    in weak tail results. For multi-term queries, require at least two
+    meaningful token overlaps before a result is shown.
+    """
+    query_terms = content_token_set(query)
+    if len(query_terms) < 3:
+        return True
+    content_terms = content_token_set(content)
+    return len(query_terms & content_terms) >= 2
+
+
 def jaccard_similarity(a: set[str], b: set[str]) -> float:
     """Jaccard similarity between two token sets."""
     if not a or not b:

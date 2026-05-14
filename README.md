@@ -396,20 +396,34 @@ opendb_memory_store(content="User prefers dark mode", memory_type="semantic")
 opendb_memory_store(content="Deployed v2.1, rollback required", memory_type="episodic", tags=["deploy"])
 opendb_memory_store(content="Always run tests before merging", memory_type="procedural")
 opendb_memory_store(content="User is a senior engineer at Acme", pinned=true)
+opendb_memory_store(
+  content="The auth spec requires key rotation every 90 days",
+  memory_type="procedural",
+  source="tool_extraction",
+  metadata={"evidence": {"file": "docs/auth.md", "lines": "42-58", "tool": "opendb_read"}}
+)
 ```
 
 Three memory types: **semantic** (facts/knowledge), **episodic** (events/outcomes), **procedural** (workflows/rules).
+
+Write memories as durable, context-free atoms. Skip one-off commands and small talk; use `metadata.evidence` when a memory comes from a file or tool result so agents can drill back to the source.
 
 Set `pinned=true` for critical facts — they get 10x ranking boost and can be retrieved instantly with `pinned_only=true`.
 
 ### `opendb_memory_recall` — Search memories
 
-Results ranked by **relevance x recency**. Pinned memories always surface first.
+Results ranked by **relevance x recency**. Multi-term queries filter weak tail matches that only hit one broad token, so recall stays compact. Recall output includes source, confidence, supersession, tags, and evidence metadata when available. Pinned memories always surface first.
 
 ```
 opendb_memory_recall(query="user preferences")
 opendb_memory_recall(query="deploy", memory_type="episodic")
 opendb_memory_recall(pinned_only=true)   # Instant — no search needed, ideal for agent startup
+```
+
+For a white-box Markdown summary of stored memories:
+
+```
+opendb memory profile --output .opendb/memory-profile.md
 ```
 
 ### `opendb_memory_forget` — Delete memories
