@@ -48,6 +48,8 @@ STOPWORDS = frozenset(
     "want way well went what".split()
 )
 
+_CJK_RE = re.compile(r"[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]")
+
 
 def content_token_set(text: str) -> set[str]:
     """Extract significant lowercased tokens from text (excluding stopwords)."""
@@ -66,6 +68,8 @@ def passes_memory_query_gate(query: str, content: str) -> bool:
     in weak tail results. For multi-term queries, require at least two
     meaningful token overlaps before a result is shown.
     """
+    if _CJK_RE.search(query) or _CJK_RE.search(content):
+        return True
     query_terms = content_token_set(query)
     if len(query_terms) < 3:
         return True

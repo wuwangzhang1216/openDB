@@ -79,6 +79,32 @@ def test_format_memory_recall_response_exposes_provenance() -> None:
     assert "id: mem-1" in text
 
 
+def test_format_memory_recall_response_prefers_highlight_over_long_content() -> None:
+    content = "Important summary. " + ("filler text " * 500) + "final detail."
+
+    text = format_memory_recall_response(
+        {
+            "total": 1,
+            "results": [
+                {
+                    "memory_id": "long-1",
+                    "content": content,
+                    "highlight": "Important summary.",
+                    "memory_type": "semantic",
+                    "source": "tool_extraction",
+                    "confidence": 1.0,
+                    "metadata": {},
+                }
+            ],
+        },
+        "important",
+    )
+
+    assert "Important summary." in text
+    assert "final detail." not in text
+    assert len(text) < 500
+
+
 def test_build_memory_profile_groups_existing_memories() -> None:
     profile = build_memory_profile(
         [
@@ -117,6 +143,35 @@ def test_build_memory_profile_groups_existing_memories() -> None:
     assert "## Procedural Workflows And Rules" in profile
     assert "- [procedural] Run focused tests after memory format changes." in profile
     assert "evidence: tests/test_memory_render.py | via opendb_read" in profile
+
+
+@pytest.mark.asyncio
+async def test_cjk_multi_term_recall_survives_query_gate(tmp_path) -> None:
+    from opendb_core.storage.sqlite import SQLiteBackend
+
+    backend = SQLiteBackend(db_path=tmp_path / "memory.db")
+    await backend.init()
+    try:
+        await backend.store_memory(
+            memory_id="cjk-1",
+            content="用户偏好使用中文界面和搜索支持",
+            memory_type="semantic",
+            tags=[],
+            metadata={},
+        )
+
+        result = await backend.recall_memories(
+            query="中文界面 搜索支持 用户偏好",
+            memory_type=None,
+            tags=None,
+            limit=10,
+            offset=0,
+        )
+    finally:
+        await backend.close()
+
+    assert result["total"] == 1
+    assert result["results"][0]["memory_id"] == "cjk-1"
 
 
 @pytest.mark.asyncio

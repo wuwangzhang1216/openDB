@@ -60,6 +60,13 @@ def _metadata_dict(metadata: Any) -> dict[str, Any]:
     return {}
 
 
+def _memory_preview(memory: Mapping[str, Any]) -> str:
+    highlight = memory.get("highlight")
+    if highlight:
+        return _one_line(highlight, max_len=500)
+    return _one_line(memory.get("content", ""), max_len=500)
+
+
 def format_evidence(evidence: Any) -> str | None:
     """Format ``metadata.evidence`` as a compact drill-down hint.
 
@@ -224,7 +231,7 @@ def format_memory_recall_response(data: Mapping[str, Any], query: str) -> str:
         if score is not None:
             score_part = f" score: {_format_score(score)}"
         lines.append(f"  {idx}. [{mtype}]{score_part}")
-        lines.append(f"     {memory.get('content', '')}")
+        lines.append(f"     {_memory_preview(memory)}")
         for detail in memory_detail_lines(memory):
             lines.append(f"     {detail}")
         lines.append("")
