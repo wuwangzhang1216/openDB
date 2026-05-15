@@ -48,6 +48,7 @@ benchmark/benchmark_workspace/
 
 # Testing
 .pytest_cache/
+.pytest-tmp*/
 .coverage
 htmlcov/
 .hypothesis/

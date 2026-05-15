@@ -53,7 +53,7 @@ def _is_code_file(filename: str) -> bool:
 # Lifespan
 # ---------------------------------------------------------------------------
 @asynccontextmanager
-async def app_lifespan() -> AsyncIterator[dict]:
+async def app_lifespan(_app: FastMCP) -> AsyncIterator[dict]:
     yield {}
     await close_client()
 

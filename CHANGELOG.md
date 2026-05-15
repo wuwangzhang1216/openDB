@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Restored CLI compatibility across Typer and FastMCP releases by validating
+  eval export limits in-process, preferring `run_stdio_async()` for newer MCP
+  SDKs, falling back to the legacy stdio entrypoint, and aligning the MCP
+  lifespan hook with the newer FastMCP callback signature.
+- Fixed `opendb serve` to launch the real `opendb_core.main:app` ASGI entrypoint
+  in embedded mode.
+
 ## [1.5.0] — 2026-04-11
 
 ### Added

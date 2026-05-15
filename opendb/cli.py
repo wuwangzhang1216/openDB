@@ -42,6 +42,21 @@ def _run(coro: object) -> object:
     return asyncio.run(coro)
 
 
+async def _run_mcp_stdio_server(mcp: object) -> None:
+    """Support both the current FastMCP stdio API and the older async entrypoint."""
+    run_stdio_async = getattr(mcp, "run_stdio_async", None)
+    if callable(run_stdio_async):
+        await run_stdio_async()
+        return
+
+    run_async = getattr(mcp, "run_async", None)
+    if callable(run_async):
+        await run_async(transport="stdio")
+        return
+
+    raise RuntimeError("Installed MCP server does not expose a supported stdio entrypoint")
+
+
 # ---------------------------------------------------------------------------
 # init
 # ---------------------------------------------------------------------------
@@ -188,8 +203,10 @@ def serve_mcp(
         )
         # Import and run the MCP server using in-process services
         from mcp_server.server import mcp
-        await mcp.run_async(transport="stdio")
-        await ws.close()
+        try:
+            await _run_mcp_stdio_server(mcp)
+        finally:
+            await ws.close()
 
     _run(_start())
 
@@ -213,7 +230,7 @@ def serve(
     settings.opendb_dir = workspace.resolve() / ".opendb"
 
     typer.echo(f"Starting OpenDB HTTP server (embedded) at http://{host}:{port}")
-    uvicorn.run("app.main:app", host=host, port=port, reload=False)
+    uvicorn.run("opendb_core.main:app", host=host, port=port, reload=False)
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +263,7 @@ app.add_typer(eval_app, name="eval")
 def eval_export(
     workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
     output: Path | None = typer.Option(None, "--output", "-o", help="Write NDJSON to a file"),
-    limit: int = typer.Option(1000, help="Maximum rows to export", ge=1),
+    limit: int = typer.Option(1000, help="Maximum rows to export"),
     tool: str | None = typer.Option(
         None,
         "--tool",
@@ -259,6 +276,10 @@ def eval_export(
     when capture is currently disabled; it reads whatever has already been
     recorded in the workspace database.
     """
+    if limit < 1:
+        typer.echo("Error: --limit must be at least 1", err=True)
+        raise typer.Exit(code=1)
+
     if tool and tool not in {"search", "memory_recall"}:
         typer.echo("Error: --tool must be 'search' or 'memory_recall'", err=True)
         raise typer.Exit(code=1)
