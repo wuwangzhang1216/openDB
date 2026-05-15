@@ -211,6 +211,64 @@ class TestWorkspaceService:
         assert (root / ".opendb" / "config.json").exists()
 
     @pytest.mark.asyncio
+    async def test_force_remove_active_reapplies_successor_workspace(self, isolated_state, two_workspaces):
+        from opendb_core.services import workspace_service
+        import opendb_core.storage as storage_mod
+
+        ws_a, ws_b = two_workspaces
+        applied_dirs: list[Path] = []
+        opened_keys: list[str] = []
+        closed_keys: list[str] = []
+
+        async def fake_init_backend(backend_type: str = "postgres", **kwargs) -> None:
+            assert backend_type == "sqlite"
+            key = str(kwargs["db_path"])
+            opened_keys.append(key)
+            storage_mod._backends.setdefault(key, object())
+            storage_mod._active_key = key
+
+        async def fake_close_backend(key: str | None = None) -> None:
+            lookup = key or storage_mod._active_key
+            if lookup is None:
+                return
+            closed_keys.append(lookup)
+            storage_mod._backends.pop(lookup, None)
+            if storage_mod._active_key == lookup:
+                storage_mod._active_key = next(iter(storage_mod._backends), None) if storage_mod._backends else None
+
+        def fake_apply_workspace_config(opendb_dir: Path, cfg) -> None:
+            applied_dirs.append(opendb_dir)
+
+        try:
+            storage_mod._backends.clear()
+            storage_mod._active_key = None
+
+            with pytest.MonkeyPatch.context() as monkeypatch:
+                monkeypatch.setattr(workspace_service, "apply_workspace_config", fake_apply_workspace_config)
+                monkeypatch.setattr(workspace_service, "_ensure_parsers_registered", lambda: None)
+                monkeypatch.setattr(storage_mod, "init_backend", fake_init_backend)
+                monkeypatch.setattr(storage_mod, "close_backend", fake_close_backend)
+
+                entry_a = await workspace_service.add_workspace(str(ws_a), name="A")
+                entry_b = await workspace_service.add_workspace(str(ws_b), name="B")
+
+                await workspace_service.switch_workspace(entry_a["id"])
+                await workspace_service.switch_workspace(entry_b["id"])
+                await workspace_service.remove_workspace(entry_b["id"], force=True)
+
+                current = await workspace_service.current_workspace()
+
+            assert current["id"] == entry_a["id"]
+            assert len(closed_keys) == 1
+            assert closed_keys[0].replace("/", "\\").endswith("ws_b\\.opendb\\metadata.db")
+            assert storage_mod._active_key.replace("/", "\\").endswith("ws_a\\.opendb\\metadata.db")
+            assert str(applied_dirs[-1]).replace("/", "\\").endswith("ws_a\\.opendb")
+            assert opened_keys[-1].replace("/", "\\").endswith("ws_a\\.opendb\\metadata.db")
+        finally:
+            storage_mod._backends.clear()
+            storage_mod._active_key = None
+
+    @pytest.mark.asyncio
     async def test_smooth_switch_preserves_per_workspace_data(
         self, isolated_state, two_workspaces
     ):

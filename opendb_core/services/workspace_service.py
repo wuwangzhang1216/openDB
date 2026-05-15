@@ -151,6 +151,8 @@ async def remove_workspace(id_or_root: str, force: bool = False) -> dict:
     If ``force=True`` and the target is active, the backend is closed and
     the next-most-recent workspace becomes active (if any).
     """
+    next_active_id: str | None = None
+
     async with _switch_lock:
         reg = registry_mod.load()
         entry = reg.get(id_or_root)
@@ -166,6 +168,7 @@ async def remove_workspace(id_or_root: str, force: bool = False) -> dict:
 
         removed = reg.remove(entry.id)
         registry_mod.save(reg)
+        next_active_id = reg.active_id
 
         # If we removed the active workspace under force, also close its backend.
         if was_active:
@@ -176,10 +179,8 @@ async def remove_workspace(id_or_root: str, force: bool = False) -> dict:
             except Exception as e:  # pragma: no cover — defensive
                 logger.warning("Failed to close backend for removed workspace: %s", e)
 
-            # If another workspace is now active, activate it properly.
-            if reg.active_id is not None:
-                # Release the lock before recursing — use inner switch.
-                pass  # fall through; caller can switch explicitly.
+    if was_active and next_active_id is not None:
+        await switch_workspace(next_active_id)
 
     result = removed.to_dict() if removed is not None else {}
     result["removed"] = True
