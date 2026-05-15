@@ -150,6 +150,37 @@ class PostgresBackend(PgMemoryMixin):
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target)"
             )
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS code_symbols (
+                    id             BIGSERIAL PRIMARY KEY,
+                    file_id        UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+                    name           TEXT NOT NULL,
+                    kind           TEXT NOT NULL,
+                    qualified_name TEXT NOT NULL,
+                    start_line     INTEGER NOT NULL,
+                    end_line       INTEGER NOT NULL,
+                    signature      TEXT NOT NULL DEFAULT '',
+                    docstring      TEXT NOT NULL DEFAULT '',
+                    tsv            TSVECTOR GENERATED ALWAYS AS (
+                        to_tsvector('english', name || ' ' || qualified_name || ' ' || signature || ' ' || docstring)
+                    ) STORED,
+                    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_code_symbols_file ON code_symbols(file_id)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_code_symbols_name ON code_symbols(name)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_code_symbols_kind ON code_symbols(kind)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_code_symbols_tsv ON code_symbols USING GIN(tsv)"
+            )
 
     # ------------------------------------------------------------------
     # Ingestion
@@ -252,10 +283,19 @@ class PostgresBackend(PgMemoryMixin):
                     )
 
                     from opendb_core.config import settings
+                    source_path = merged_metadata.get("source_path") or original_filename
+                    from opendb_core.utils.code_intel import extract_code_intel_from_pages
+                    symbols, code_links = extract_code_intel_from_pages(
+                        parse_result.pages,
+                        page_line_ranges,
+                        filename=original_filename,
+                        source_path=source_path,
+                    )
+                    await self._replace_code_symbols_unlocked(conn, str(file_uuid), symbols)
                     if settings.link_extraction_enabled:
-                        source_path = merged_metadata.get("source_path") or original_filename
                         from opendb_core.utils.link_extractor import extract_file_links
                         links = extract_file_links(full_text, source_path=source_path)
+                        links.extend(code_links)
                         await self._replace_file_links_unlocked(conn, str(file_uuid), links)
 
                     await conn.execute(
@@ -961,6 +1001,108 @@ class PostgresBackend(PgMemoryMixin):
                 ids,
             )
         return {str(r["to_file_id"]): int(r["cnt"]) for r in rows}
+
+    async def _replace_code_symbols_unlocked(self, conn, file_id: str, symbols: list[dict]) -> int:
+        import uuid as _uuid
+
+        file_uuid = _uuid.UUID(file_id)
+        await conn.execute("DELETE FROM code_symbols WHERE file_id = $1", file_uuid)
+        rows = []
+        for symbol in symbols:
+            name = str(symbol.get("name") or "").strip()
+            if not name:
+                continue
+            rows.append((
+                file_uuid,
+                name,
+                str(symbol.get("kind") or "symbol"),
+                str(symbol.get("qualified_name") or name),
+                int(symbol.get("start_line") or 1),
+                int(symbol.get("end_line") or symbol.get("start_line") or 1),
+                str(symbol.get("signature") or "")[:1000],
+                str(symbol.get("docstring") or "")[:2000],
+            ))
+        if rows:
+            await conn.executemany(
+                """
+                INSERT INTO code_symbols
+                    (file_id, name, kind, qualified_name, start_line, end_line, signature, docstring)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                """,
+                rows,
+            )
+        return len(rows)
+
+    async def search_code_symbols(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        kinds: list[str] | None = None,
+    ) -> list[dict]:
+        from opendb_core.database import get_pool
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            kind_clause = ""
+            params: list = [query, limit]
+            if kinds:
+                kind_clause = "AND s.kind = ANY($3::text[])"
+                params.append(kinds)
+            rows = await conn.fetch(
+                f"""
+                SELECT
+                    s.file_id::text AS file_id,
+                    f.filename,
+                    f.metadata->>'source_path' AS source_path,
+                    s.name,
+                    s.kind,
+                    s.qualified_name,
+                    s.start_line,
+                    s.end_line,
+                    s.signature,
+                    s.docstring,
+                    ts_rank(s.tsv, plainto_tsquery('english', $1)) AS rank
+                FROM code_symbols s
+                JOIN files f ON f.id = s.file_id
+                WHERE s.tsv @@ plainto_tsquery('english', $1)
+                  AND f.status = 'ready'
+                  {kind_clause}
+                ORDER BY rank DESC, length(s.qualified_name), s.start_line
+                LIMIT $2
+                """,
+                *params,
+            )
+            if not rows:
+                kind_clause = ""
+                params = [f"%{query}%", limit]
+                if kinds:
+                    kind_clause = "AND s.kind = ANY($3::text[])"
+                    params.append(kinds)
+                rows = await conn.fetch(
+                    f"""
+                    SELECT
+                        s.file_id::text AS file_id,
+                        f.filename,
+                        f.metadata->>'source_path' AS source_path,
+                        s.name,
+                        s.kind,
+                        s.qualified_name,
+                        s.start_line,
+                        s.end_line,
+                        s.signature,
+                        s.docstring,
+                        0.0 AS rank
+                    FROM code_symbols s
+                    JOIN files f ON f.id = s.file_id
+                    WHERE (s.name ILIKE $1 OR s.qualified_name ILIKE $1)
+                      AND f.status = 'ready'
+                      {kind_clause}
+                    ORDER BY length(s.qualified_name), s.start_line
+                    LIMIT $2
+                    """,
+                    *params,
+                )
+        return [dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------

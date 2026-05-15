@@ -197,6 +197,73 @@ async def search(
     return "\n".join(lines_out)
 
 
+async def context(
+    query: str,
+    limit: int = 8,
+    include_snippets: bool = True,
+) -> str:
+    """Call POST /context and format a compact agent context bundle."""
+    client = await get_client()
+    response = await client.post(
+        "/context",
+        json={
+            "query": query,
+            "limit": limit,
+            "include_snippets": include_snippets,
+        },
+    )
+
+    if response.status_code != 200:
+        return _handle_error(response)
+
+    data = response.json()
+    symbols = data.get("symbols", [])
+    snippets = data.get("snippets", [])
+    related_documents = data.get("related_documents", [])
+
+    lines_out = [f"Context for '{query}'"]
+
+    if symbols:
+        lines_out.append("")
+        lines_out.append("Symbols:")
+        for s in symbols:
+            location = s.get("source_path") or s.get("filename")
+            lines_out.append(
+                f"  {s.get('qualified_name')} [{s.get('kind')}] "
+                f"{location}:{s.get('start_line')}-{s.get('end_line')}"
+            )
+            if s.get("signature"):
+                lines_out.append(f"    {s['signature']}")
+
+    if snippets:
+        lines_out.append("")
+        lines_out.append("Snippets:")
+        for snip in snippets:
+            location = snip.get("source_path") or snip.get("filename")
+            lines_out.append(
+                f"--- {location}:{snip.get('start_line')}-{snip.get('end_line')} "
+                f"({snip.get('symbol')})"
+            )
+            lines_out.append(snip.get("text", ""))
+
+    if related_documents:
+        lines_out.append("")
+        lines_out.append("Related documents:")
+        for doc in related_documents:
+            lines_out.append(
+                f"  {doc.get('filename')} page {doc.get('page_number')} "
+                f"score {doc.get('relevance_score')}"
+            )
+            if doc.get("highlight"):
+                lines_out.append(f"    {doc['highlight']}")
+
+    if not symbols and not related_documents:
+        lines_out.append("")
+        lines_out.append("No context found.")
+
+    return "\n".join(lines_out)
+
+
 async def get_info() -> str:
     """Call GET /info and format as readable text."""
     client = await get_client()

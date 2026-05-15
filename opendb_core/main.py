@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from opendb_core.config import settings
 from opendb_core.services.watch_service import stop_all as stop_all_watchers
 from opendb_core.routers.files import router as files_router
+from opendb_core.routers.context import router as context_router
 from opendb_core.routers.glob import router as glob_router
 from opendb_core.routers.health import router as health_router
 from opendb_core.routers.info import router as info_router
@@ -89,6 +90,7 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
 app.include_router(health_router)
 app.include_router(info_router)
 app.include_router(files_router)
+app.include_router(context_router)
 app.include_router(glob_router)
 app.include_router(index_router)
 app.include_router(read_router)

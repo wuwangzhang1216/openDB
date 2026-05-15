@@ -153,6 +153,48 @@ CREATE TABLE IF NOT EXISTS file_links (
 CREATE INDEX IF NOT EXISTS idx_file_links_from ON file_links(from_file_id);
 CREATE INDEX IF NOT EXISTS idx_file_links_to ON file_links(to_file_id);
 CREATE INDEX IF NOT EXISTS idx_file_links_target ON file_links(target);
+
+-- -----------------------------------------------------------------
+-- Lightweight code symbols
+-- -----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS code_symbols (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id        TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    name           TEXT NOT NULL,
+    kind           TEXT NOT NULL,
+    qualified_name TEXT NOT NULL,
+    start_line     INTEGER NOT NULL,
+    end_line       INTEGER NOT NULL,
+    signature      TEXT NOT NULL DEFAULT '',
+    docstring      TEXT NOT NULL DEFAULT '',
+    created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_code_symbols_file ON code_symbols(file_id);
+CREATE INDEX IF NOT EXISTS idx_code_symbols_name ON code_symbols(name);
+CREATE INDEX IF NOT EXISTS idx_code_symbols_kind ON code_symbols(kind);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS code_symbols_fts USING fts5(
+    name,
+    qualified_name,
+    signature,
+    docstring
+);
+
+CREATE TRIGGER IF NOT EXISTS code_symbols_ai AFTER INSERT ON code_symbols BEGIN
+    INSERT INTO code_symbols_fts(rowid, name, qualified_name, signature, docstring)
+    VALUES (NEW.id, NEW.name, NEW.qualified_name, NEW.signature, NEW.docstring);
+END;
+
+CREATE TRIGGER IF NOT EXISTS code_symbols_ad AFTER DELETE ON code_symbols BEGIN
+    DELETE FROM code_symbols_fts WHERE rowid = OLD.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS code_symbols_au AFTER UPDATE ON code_symbols BEGIN
+    DELETE FROM code_symbols_fts WHERE rowid = OLD.id;
+    INSERT INTO code_symbols_fts(rowid, name, qualified_name, signature, docstring)
+    VALUES (NEW.id, NEW.name, NEW.qualified_name, NEW.signature, NEW.docstring);
+END;
 """
 
 
@@ -383,10 +425,19 @@ class SQLiteBackend(SQLiteMemoryMixin):
                 )
 
                 from opendb_core.config import settings
+                source_path = merged_metadata.get("source_path") or original_filename
+                from opendb_core.utils.code_intel import extract_code_intel_from_pages
+                symbols, code_links = extract_code_intel_from_pages(
+                    parse_result.pages,
+                    page_line_ranges,
+                    filename=original_filename,
+                    source_path=source_path,
+                )
+                await self._replace_code_symbols_unlocked(file_id, symbols)
                 if settings.link_extraction_enabled:
-                    source_path = merged_metadata.get("source_path") or original_filename
                     from opendb_core.utils.link_extractor import extract_file_links
                     links = extract_file_links(full_text, source_path=source_path)
+                    links.extend(code_links)
                     await self._replace_file_links_unlocked(file_id, links)
 
                 await self._db.execute(
@@ -999,3 +1050,121 @@ class SQLiteBackend(SQLiteMemoryMixin):
         ) as cur:
             rows = await cur.fetchall()
         return {r["to_file_id"]: int(r["cnt"]) for r in rows}
+
+    async def _replace_code_symbols_unlocked(
+        self,
+        file_id: str,
+        symbols: list[dict],
+    ) -> int:
+        await self._db.execute("DELETE FROM code_symbols WHERE file_id = ?", (file_id,))
+
+        rows = []
+        for symbol in symbols:
+            name = str(symbol.get("name") or "").strip()
+            if not name:
+                continue
+            rows.append((
+                file_id,
+                name,
+                str(symbol.get("kind") or "symbol"),
+                str(symbol.get("qualified_name") or name),
+                int(symbol.get("start_line") or 1),
+                int(symbol.get("end_line") or symbol.get("start_line") or 1),
+                str(symbol.get("signature") or "")[:1000],
+                str(symbol.get("docstring") or "")[:2000],
+            ))
+        if not rows:
+            return 0
+        await self._db.executemany(
+            """
+            INSERT INTO code_symbols
+                (file_id, name, kind, qualified_name, start_line, end_line, signature, docstring)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        return len(rows)
+
+    async def search_code_symbols(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        kinds: list[str] | None = None,
+    ) -> list[dict]:
+        from opendb_core.utils.tokenizer import tokenize_for_fts
+
+        match_query = tokenize_for_fts(query)
+        params: list[object] = [match_query]
+        kind_clause = ""
+        if kinds:
+            placeholders = ",".join("?" for _ in kinds)
+            kind_clause = f"AND s.kind IN ({placeholders})"
+            params.extend(kinds)
+        params.append(limit)
+        try:
+            async with self._db.execute(
+                f"""
+                SELECT
+                    s.file_id,
+                    f.filename,
+                    json_extract(f.metadata, '$.source_path') AS source_path,
+                    s.name,
+                    s.kind,
+                    s.qualified_name,
+                    s.start_line,
+                    s.end_line,
+                    s.signature,
+                    s.docstring,
+                    bm25(code_symbols_fts) AS rank
+                FROM code_symbols_fts
+                JOIN code_symbols s ON s.id = code_symbols_fts.rowid
+                JOIN files f ON f.id = s.file_id
+                WHERE code_symbols_fts MATCH ?
+                  AND f.status = 'ready'
+                  {kind_clause}
+                ORDER BY rank
+                LIMIT ?
+                """,
+                params,
+            ) as cur:
+                rows = await cur.fetchall()
+        except aiosqlite.OperationalError:
+            rows = []
+        if rows:
+            return [dict(r) for r in rows]
+        else:
+            like = f"%{query}%"
+            params = [like, like]
+            kind_clause = ""
+            if kinds:
+                placeholders = ",".join("?" for _ in kinds)
+                kind_clause = f"AND s.kind IN ({placeholders})"
+                params.extend(kinds)
+            params.append(limit)
+            async with self._db.execute(
+                f"""
+                SELECT
+                    s.file_id,
+                    f.filename,
+                    json_extract(f.metadata, '$.source_path') AS source_path,
+                    s.name,
+                    s.kind,
+                    s.qualified_name,
+                    s.start_line,
+                    s.end_line,
+                    s.signature,
+                    s.docstring,
+                    0.0 AS rank
+                FROM code_symbols s
+                JOIN files f ON f.id = s.file_id
+                WHERE (s.name LIKE ? OR s.qualified_name LIKE ?)
+                  AND f.status = 'ready'
+                  {kind_clause}
+                ORDER BY length(s.qualified_name), s.start_line
+                LIMIT ?
+                """,
+                params,
+            ) as cur:
+                rows = await cur.fetchall()
+        return [dict(r) for r in rows]
