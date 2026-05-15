@@ -146,3 +146,22 @@ async def test_app_lifespan_accepts_app_and_closes_client(monkeypatch) -> None:
         assert context == {}
 
     assert closed is True
+
+
+@pytest.mark.asyncio
+async def test_app_lifespan_accepts_legacy_noarg_call_and_closes_client(monkeypatch) -> None:
+    """Older FastMCP builds should still be able to invoke lifespan callbacks without args."""
+    import mcp_server.server as server
+
+    closed = False
+
+    async def fake_close_client() -> None:
+        nonlocal closed
+        closed = True
+
+    monkeypatch.setattr(server, "close_client", fake_close_client)
+
+    async with server.app_lifespan() as context:
+        assert context == {}
+
+    assert closed is True
