@@ -216,6 +216,20 @@ class Workspace:
         from opendb_core.services.search_service import search_files
         return await search_files(query=query, limit=limit, offset=offset)
 
+    async def context(
+        self,
+        query: str,
+        limit: int = 8,
+        include_snippets: bool = True,
+    ) -> dict:
+        """Build compact agent context from indexed symbols and FTS hits."""
+        from opendb_core.services.context_service import build_context
+        return await build_context(
+            query=query,
+            limit=limit,
+            include_snippets=include_snippets,
+        )
+
     async def info(self) -> dict:
         """Return workspace statistics."""
         from opendb_core.storage import get_backend

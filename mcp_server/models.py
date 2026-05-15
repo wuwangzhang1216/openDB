@@ -58,6 +58,20 @@ class SearchInput(BaseModel):
     offset: int = Field(0, description="Pagination offset", ge=0)
 
 
+class ContextInput(BaseModel):
+    """Input for compact agent-oriented context lookup."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    query: str = Field(
+        ..., description="Task, symbol, or topic to build compact context for", min_length=1
+    )
+    limit: int = Field(8, description="Max symbols/results", ge=1, le=20)
+    include_snippets: bool = Field(
+        True, description="Include small source snippets around matching symbols"
+    )
+
+
 class GlobInput(BaseModel):
     """Input for finding files matching a glob pattern."""
 

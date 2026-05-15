@@ -149,3 +149,27 @@ CREATE TABLE file_links (
 CREATE INDEX idx_file_links_from ON file_links(from_file_id);
 CREATE INDEX idx_file_links_to ON file_links(to_file_id);
 CREATE INDEX idx_file_links_target ON file_links(target);
+
+-- ============================================================
+-- code_symbols: lightweight code outline for local agent context
+-- ============================================================
+CREATE TABLE code_symbols (
+    id              BIGSERIAL PRIMARY KEY,
+    file_id         UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    qualified_name  TEXT NOT NULL,
+    start_line      INTEGER NOT NULL,
+    end_line        INTEGER NOT NULL,
+    signature       TEXT NOT NULL DEFAULT '',
+    docstring       TEXT NOT NULL DEFAULT '',
+    tsv             TSVECTOR GENERATED ALWAYS AS (
+                        to_tsvector('english', name || ' ' || qualified_name || ' ' || signature || ' ' || docstring)
+                    ) STORED,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_code_symbols_file ON code_symbols(file_id);
+CREATE INDEX idx_code_symbols_name ON code_symbols(name);
+CREATE INDEX idx_code_symbols_kind ON code_symbols(kind);
+CREATE INDEX idx_code_symbols_tsv ON code_symbols USING GIN(tsv);
