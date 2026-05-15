@@ -137,6 +137,16 @@ class StorageBackend(Protocol):
         """
         ...
 
+    async def search_code_symbols(
+        self,
+        query: str,
+        *,
+        limit: int = 20,
+        kinds: list[str] | None = None,
+    ) -> list[dict]:
+        """Search indexed code symbols by name/signature/docstring."""
+        ...
+
     # ------------------------------------------------------------------
     # Indexing
     # ------------------------------------------------------------------

@@ -5,6 +5,7 @@ Usage::
     opendb init [PATH]          # create .opendb/ in PATH (default: current dir)
     opendb index [PATH]         # index PATH (default: current dir)
     opendb search QUERY         # search indexed files
+    opendb context QUERY        # build compact code/document context
     opendb read FILENAME        # read a file
     opendb memory profile       # render a white-box memory profile
     opendb serve-mcp            # start MCP server (stdio, embedded mode)
@@ -134,6 +135,52 @@ def search(
         if r.get("highlight"):
             typer.echo(f"    {r['highlight'][:120]}")
         typer.echo("")
+
+
+# ---------------------------------------------------------------------------
+# context
+# ---------------------------------------------------------------------------
+
+@app.command()
+def context(
+    query: str = typer.Argument(..., help="Task, symbol, or topic"),
+    workspace: Path = typer.Option(Path("."), "--workspace", "-w", help="Workspace root"),
+    limit: int = typer.Option(8, help="Maximum symbols/results"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Build compact context from indexed code symbols and documents."""
+    from opendb_core.workspace import Workspace
+
+    ws = Workspace.open(workspace)
+
+    async def _context() -> dict:
+        await ws.init()
+        result = await ws.context(query, limit=limit)
+        await ws.close()
+        return result
+
+    result = _run(_context())
+
+    if json_output:
+        typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
+        return
+
+    typer.echo(f"Context for '{query}':\n")
+    for s in result.get("symbols", []):
+        location = s.get("source_path") or s.get("filename")
+        typer.echo(
+            f"  {s.get('qualified_name')} [{s.get('kind')}] "
+            f"{location}:{s.get('start_line')}-{s.get('end_line')}"
+        )
+    if result.get("snippets"):
+        typer.echo("")
+        for snip in result["snippets"]:
+            location = snip.get("source_path") or snip.get("filename")
+            typer.echo(
+                f"--- {location}:{snip.get('start_line')}-{snip.get('end_line')}"
+            )
+            typer.echo(snip.get("text", ""))
+            typer.echo("")
 
 
 # ---------------------------------------------------------------------------

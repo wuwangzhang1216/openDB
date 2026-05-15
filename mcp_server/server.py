@@ -1,4 +1,4 @@
-"""OpenDB MCP Server — 3 tools: read, search, glob."""
+"""OpenDB MCP Server."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_server.client import close_client
 from mcp_server.models import (
-    AddWorkspaceInput, CurrentWorkspaceInput, GlobInput, InfoInput,
+    AddWorkspaceInput, ContextInput, CurrentWorkspaceInput, GlobInput, InfoInput,
     ListWorkspacesInput, MemoryForgetInput, MemoryRecallInput, MemoryStoreInput,
     ReadInput, RemoveWorkspaceInput, SearchInput, UseWorkspaceInput,
 )
@@ -178,6 +178,30 @@ async def opendb_search(params: SearchInput) -> str:
         context=params.context,
         limit=params.limit,
         offset=params.offset,
+    )
+
+
+@mcp.tool(
+    name="opendb_context",
+    annotations={
+        "title": "Build Context",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def opendb_context(params: ContextInput) -> str:
+    """Build compact context from indexed code symbols plus full-text hits.
+
+    Use this after opendb_search finds a concept, or directly when you know a
+    symbol/function/class name. It returns locations and small snippets instead
+    of dumping entire files into the agent context.
+    """
+    return await opendb.context(
+        query=params.query,
+        limit=params.limit,
+        include_snippets=params.include_snippets,
     )
 
 
