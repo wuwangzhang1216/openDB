@@ -54,6 +54,7 @@ def _is_code_file(filename: str) -> bool:
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def app_lifespan(_app: FastMCP) -> AsyncIterator[dict]:
+    # Newer FastMCP releases pass the app instance into lifespan callbacks.
     yield {}
     await close_client()
 

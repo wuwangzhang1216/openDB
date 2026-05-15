@@ -44,11 +44,13 @@ def _run(coro: object) -> object:
 
 async def _run_mcp_stdio_server(mcp: object) -> None:
     """Support both the current FastMCP stdio API and the older async entrypoint."""
+    # FastMCP moved stdio startup onto a dedicated helper in newer SDKs.
     run_stdio_async = getattr(mcp, "run_stdio_async", None)
     if callable(run_stdio_async):
         await run_stdio_async()
         return
 
+    # Older releases still expose the transport-switching async runner.
     run_async = getattr(mcp, "run_async", None)
     if callable(run_async):
         await run_async(transport="stdio")
@@ -276,6 +278,7 @@ def eval_export(
     when capture is currently disabled; it reads whatever has already been
     recorded in the workspace database.
     """
+    # Keep the CLI behavior stable across Typer versions that do not support ge=.
     if limit < 1:
         typer.echo("Error: --limit must be at least 1", err=True)
         raise typer.Exit(code=1)
