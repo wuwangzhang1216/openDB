@@ -10,6 +10,9 @@ import os
 from pathlib import Path
 
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+from opendb_core.main import app
 
 
 # ---------------------------------------------------------------------------
@@ -249,3 +252,44 @@ class TestWorkspaceService:
 
         await ws_a.close()
         await ws_b.close()
+
+
+# ---------------------------------------------------------------------------
+# Router-level regression tests
+# ---------------------------------------------------------------------------
+
+
+class TestWorkspaceRouters:
+    @pytest.mark.asyncio
+    async def test_glob_defaults_to_active_workspace_when_path_omitted(
+        self, isolated_state, two_workspaces
+    ):
+        from opendb_core.services import workspace_service
+
+        ws_a, ws_b = two_workspaces
+        await workspace_service.add_workspace(str(ws_a))
+        entry_b = await workspace_service.add_workspace(str(ws_b))
+        await workspace_service.switch_workspace(entry_b["id"])
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/glob", params={"pattern": "*.txt"})
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "count": 1,
+            "truncated": False,
+            "files": ["beta.txt"],
+        }
+
+    @pytest.mark.asyncio
+    async def test_glob_without_path_requires_active_workspace(self, isolated_state):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/glob", params={"pattern": "*.txt"})
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "error": "bad_request",
+            "detail": "path parameter is required when no active workspace is set",
+        }

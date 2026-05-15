@@ -8,6 +8,8 @@ from pathlib import Path
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+from opendb_core.services import workspace_service
+
 router = APIRouter(tags=["glob"])
 
 _MAX_RESULTS = 500
@@ -20,10 +22,16 @@ async def glob_files(
 ) -> dict | JSONResponse:
     """Find files matching a glob pattern. Returns paths sorted by modification time (newest first)."""
     if not path:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "bad_request", "detail": "path parameter is required"},
-        )
+        active = await workspace_service.current_workspace()
+        if active is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "bad_request",
+                    "detail": "path parameter is required when no active workspace is set",
+                },
+            )
+        path = active["root"]
 
     root = Path(path)
     if not root.is_dir():
