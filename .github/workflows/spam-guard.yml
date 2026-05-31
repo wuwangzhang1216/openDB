@@ -1,0 +1,165 @@
+name: Spam Guard
+
+# Auto-moderates content created by new accounts on issues, pull requests, and
+# discussions. This complements the repository "existing_users" interaction
+# limit: that built-in limit only blocks accounts < 24h old, only covers
+# issues/PRs, and expires after at most six months — whereas this workflow uses
+# a configurable age threshold (default: registered < 90 days ≈ 3 months), also
+# covers Discussions, and runs permanently.
+#
+# Strictness: it acts ONLY on accounts younger than NEW_ACCOUNT_MAX_AGE_DAYS
+# that are not collaborators/members/prior contributors. Every action is
+# reversible (un-minimize / unlock / reopen / remove label). Tune the behaviour
+# with the env values in the job below.
+#
+# Note: the discussion.* triggers only fire once Discussions is enabled for the
+# repo AND this workflow lives on the default branch.
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  discussion:
+    types: [created]
+  discussion_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  discussions: write
+  contents: read
+
+concurrency:
+  group: spam-guard-${{ github.event_name }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    env:
+      NEW_ACCOUNT_MAX_AGE_DAYS: '90'    # accounts younger than this many days count as "new" (~3 months)
+      MINIMIZE_COMMENTS: 'true'         # hide new-account comments as spam (reversible)
+      LOCK_NEW_THREADS: 'true'          # lock new-account issues/discussions (reversible)
+      CLOSE_NEW_THREADS: 'false'        # also close them (off by default; conservative)
+      SPAM_LABEL: 'possible-spam'       # label added to flagged issues (empty = no label)
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const ev = context.eventName;
+            const p = context.payload;
+
+            const cfg = {
+              maxAgeDays: Number(process.env.NEW_ACCOUNT_MAX_AGE_DAYS || '90'),
+              minimize: process.env.MINIMIZE_COMMENTS === 'true',
+              lock: process.env.LOCK_NEW_THREADS === 'true',
+              close: process.env.CLOSE_NEW_THREADS === 'true',
+              label: process.env.SPAM_LABEL || '',
+            };
+
+            // Associations that mean the author is already trusted -> never moderated.
+            const TRUSTED = new Set(['OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR']);
+
+            // Normalise the event into a single shape.
+            let kind, surface, author, assoc, nodeId, url, issueNumber = null;
+            if (ev === 'issue_comment') {
+              kind = 'comment'; surface = 'issue';
+              author = p.comment.user.login; assoc = p.comment.author_association;
+              nodeId = p.comment.node_id; issueNumber = p.issue.number; url = p.comment.html_url;
+            } else if (ev === 'discussion_comment') {
+              kind = 'comment'; surface = 'discussion';
+              author = p.comment.user.login; assoc = p.comment.author_association;
+              nodeId = p.comment.node_id; url = p.comment.html_url;
+            } else if (ev === 'issues') {
+              kind = 'thread'; surface = 'issue';
+              author = p.issue.user.login; assoc = p.issue.author_association;
+              nodeId = p.issue.node_id; issueNumber = p.issue.number; url = p.issue.html_url;
+            } else if (ev === 'discussion') {
+              kind = 'thread'; surface = 'discussion';
+              author = p.discussion.user.login; assoc = p.discussion.author_association;
+              nodeId = p.discussion.node_id; url = p.discussion.html_url;
+            } else {
+              core.info(`Event ${ev} not handled; skipping.`);
+              return;
+            }
+            assoc = String(assoc || 'NONE').toUpperCase();
+            core.info(`event=${ev} surface=${surface} kind=${kind} author=${author} assoc=${assoc} url=${url}`);
+
+            // Skip bots.
+            const senderType = (p.sender && p.sender.type) || '';
+            if (senderType === 'Bot' || /\[bot\]$/i.test(author)) {
+              core.info(`${author} is a bot; skipping.`);
+              return;
+            }
+
+            // Skip trusted authors.
+            if (TRUSTED.has(assoc)) {
+              core.info(`${author} association ${assoc} is trusted; skipping.`);
+              return;
+            }
+
+            // Account-age gate — this is the real "new account" check (default < 90 days).
+            let createdAt;
+            try {
+              const u = await github.rest.users.getByUsername({ username: author });
+              createdAt = u.data.created_at;
+            } catch (e) {
+              core.warning(`Could not fetch user ${author} (${e.message}); skipping to avoid false positives.`);
+              return;
+            }
+            const ageDays = (Date.now() - new Date(createdAt).getTime()) / 8.64e7;
+            core.info(`${author} created ${createdAt} -> ${ageDays.toFixed(1)}d old (threshold ${cfg.maxAgeDays}d)`);
+            if (!(ageDays < cfg.maxAgeDays)) {
+              core.info('Account is older than threshold; no action.');
+              return;
+            }
+
+            core.notice(`New account ${author} (${ageDays.toFixed(1)}d old) ${kind} on ${surface} — moderating: ${url}`);
+
+            const minimizeComment = (id) => github.graphql(
+              `mutation($id: ID!){ minimizeComment(input:{subjectId:$id, classifier:SPAM}){ minimizedComment{ isMinimized } } }`,
+              { id });
+            const lockLockable = (id) => github.graphql(
+              `mutation($id: ID!){ lockLockable(input:{lockableId:$id, lockReason:SPAM}){ lockedRecord{ locked } } }`,
+              { id });
+            const closeDiscussion = (id) => github.graphql(
+              `mutation($id: ID!){ closeDiscussion(input:{discussionId:$id, reason:OUTDATED}){ discussion{ id } } }`,
+              { id });
+
+            const notice = `:wave: This was automatically flagged because it was posted by an account registered less than ${cfg.maxAgeDays} days ago, as a spam-prevention measure. If this is a mistake, a maintainer will review and restore it.`;
+
+            try {
+              if (kind === 'comment') {
+                if (cfg.minimize) { await minimizeComment(nodeId); core.info('Comment hidden as spam.'); }
+              } else if (surface === 'issue') {
+                if (cfg.label) {
+                  try { await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: [cfg.label] }); }
+                  catch (e) { core.warning(`addLabels failed: ${e.message}`); }
+                }
+                try { await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: notice }); }
+                catch (e) { core.warning(`createComment failed: ${e.message}`); }
+                if (cfg.close) {
+                  try { await github.rest.issues.update({ owner, repo, issue_number: issueNumber, state: 'closed', state_reason: 'not_planned' }); }
+                  catch (e) { core.warning(`close failed: ${e.message}`); }
+                }
+                if (cfg.lock) {
+                  try { await github.rest.issues.lock({ owner, repo, issue_number: issueNumber, lock_reason: 'spam' }); }
+                  catch (e) { core.warning(`lock failed: ${e.message}`); }
+                }
+              } else {
+                // discussion thread
+                if (cfg.close) {
+                  try { await closeDiscussion(nodeId); core.info('Discussion closed.'); }
+                  catch (e) { core.warning(`closeDiscussion failed: ${e.message}`); }
+                }
+                if (cfg.lock) {
+                  try { await lockLockable(nodeId); core.info('Discussion locked as spam.'); }
+                  catch (e) { core.warning(`lock discussion failed: ${e.message}`); }
+                }
+              }
+            } catch (e) {
+              core.setFailed(`Moderation action failed: ${e.message}`);
+            }
