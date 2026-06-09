@@ -333,12 +333,23 @@ class SQLiteMemoryMixin:
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
                 "_age_days": eff_age,
+                "_fts": fts_score,
             })
 
-        scored = [
-            s for s in scored
-            if passes_memory_query_gate(query, str(s["content"]))
-        ]
+        # Rank-aware query gate. The token-overlap gate is a precision filter
+        # for weak tail matches, but it must never discard a strong lexical
+        # hit: different phrasing between a question and the stored answer can
+        # yield <2 overlapping tokens while the answer is still the #1 FTS
+        # match. So keep any result close to the best FTS score and apply the
+        # overlap gate only to the weaker tail.
+        if scored:
+            best_fts = max(s["_fts"] for s in scored)
+            keep_floor = best_fts * 0.15
+            scored = [
+                s for s in scored
+                if s["_fts"] >= keep_floor
+                or passes_memory_query_gate(query, str(s["content"]))
+            ]
         total = len(scored)
 
         # Recency tiebreaker: when FTS scores cluster, boost newer memories
@@ -355,6 +366,7 @@ class SQLiteMemoryMixin:
         # Strip internal field and round final scores before returning
         for s in scored:
             s.pop("_age_days", None)
+            s.pop("_fts", None)
             s["score"] = float(f"{s['score']:.6g}")
         results = scored[offset : offset + limit]
 

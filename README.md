@@ -17,8 +17,10 @@
 </p>
 
 <p align="center">
-  <b>93.6% on LongMemEval</b> — #3 on the leaderboard, beating MemMachine, Vectorize, Emergence AI, Supermemory, and Zep.<br/>
-  Zero embedding APIs. Zero vector databases. Just SQLite FTS5 and good engineering.
+  <b>Purpose-built long-term memory for coding agents.</b><br/>
+  <b>96.3%</b> on CodeMemEval (coding-agent memory) · <b>100% R@5</b> retrieval · <b>0.8 ms</b> recall · <b>93.6%</b> on LongMemEval.<br/>
+  Remember architecture decisions, conventions, APIs, and bug fixes across sessions —
+  and read the actual code. Zero embedding APIs. Zero vector databases. Just SQLite FTS5 and good engineering.
 </p>
 
 ---
@@ -38,9 +40,41 @@ It tells agents to check local files and memories before external search, write
 memories carefully, and keep OpenDB's runtime simple. For the fuller workflow,
 see [docs/agent-protocol.md](docs/agent-protocol.md).
 
+## CodeMemEval — Coding-Agent Memory (the vertical)
+
+Conversational memory benchmarks (LongMemEval) test personal facts and life events.
+Coding agents need something different: remembering **architecture decisions,
+coding conventions, API signatures, past bug fixes, and where things live** across
+many sessions — and knowing which of those are still *current* after the codebase
+evolves. **CodeMemEval** is OpenDB's purpose-built benchmark for exactly that.
+
+| | Result |
+|---|---|
+| **E2E accuracy** | **92.6%** with a cheap reader (gpt-5.4-mini) · **96.3%** with gpt-5.5 |
+| **Retrieval R@5** | **100%** — right evidence in top-5 for every question |
+| **Median recall** | **0.8 ms** |
+| **Anti-hallucination (abstention)** | **100%** — never invents facts not in memory |
+
+Perfect (100%) on architecture, conventions, API signatures, bug-fixes, code
+locations, and knowledge-updates (with gpt-5.5). Coding memory is dominated by *exact identifiers* (`CreateInvoice`,
+`:9090`, `pkg/gateway/middleware/auth.go`, `RFC 7807`) — precisely where lexical
+FTS beats embedding similarity, and where OpenDB pairs memory with real code
+reading that conversation-only layers (Mem0, Zep, Letta) don't have.
+
+```bash
+# Reproduce (uses the same harness as LongMemEval)
+python benchmark/gen_codemem.py --model gpt-5.5
+python benchmark/longmemeval_e2e_bench.py --data benchmark/codemem_dataset.json \
+    --model gpt-5.4-mini --judge-model gpt-5.4-mini
+```
+
+Full methodology: [benchmark/REPORT.md → Part 8](benchmark/REPORT.md). The dataset
+generator is hand-authored ground truth (LLM only renders transcripts), so it's
+extensible — add facts to grow coverage.
+
 ## LongMemEval Benchmark — 93.6%
 
-OpenDB achieves **93.6% E2E accuracy** on [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025), the standard benchmark for AI agent long-term memory. 500 questions, 6 categories, LLM-as-judge evaluation.
+OpenDB achieves **93.6% E2E accuracy** on [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025), the standard benchmark for AI agent long-term memory. 500 questions, 6 categories, LLM-as-judge evaluation. Memory **retrieval recall is a reproduced 100% R@5** (470/470, 0 misses) after the rank-aware recall fix described in the report.
 
 | System | LongMemEval E2E | Gen Model | Retrieval Infrastructure |
 |--------|:-:|-----------|--------------------------|

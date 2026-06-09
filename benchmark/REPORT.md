@@ -129,7 +129,16 @@ T4 (cross-reference) is the most expensive task for both. RAG uses 94k tokens an
 | single-session-user | 64 | **100%** |
 | temporal-reasoning | 127 | **100%** |
 
-> Run: `python longmemeval_bench.py` — completes in ~35s, no API key needed.
+> Run: `python longmemeval_bench.py` — completes in ~4s, no API key needed.
+
+**Rank-aware recall fix (2026-06):** these 100% figures are *reproduced* on the
+current code. Before the fix, R@5 was 96.6% (16 misses). Every miss was the same
+failure mode: the correct evidence session was the **#1 FTS hit**, but a
+token-overlap "query gate" discarded it because the question and the stored answer
+shared fewer than two words. The gate is now rank-aware — it never drops a strong
+lexical match and only filters the weak tail — lifting R@1/R@3/R@5/R@10 to 100%
+with no latency cost. Regression test: `tests/test_memory_render.py::
+test_strong_fts_match_survives_query_gate_low_overlap`.
 
 ---
 
@@ -153,6 +162,22 @@ T4 (cross-reference) is the most expensive task for both. RAG uses 94k tokens an
 > Run: `python longmemeval_e2e_bench.py --model qwen/qwen3.6-plus --judge-model qwen/qwen3.6-plus --concurrency 8`
 
 **Note**: OpenDB uses qwen3.6-plus (a significantly cheaper model) while top competitors use GPT-4.1/GPT-5-mini. Mastra showed a 10-point gap between GPT-4o (84%) and GPT-5-mini (95%) on the same system, suggesting OpenDB with GPT-4.1 would score even higher.
+
+> **Reproduced & optimized (2026-06).** The 93.6% row above used qwen3.6-plus,
+> which we can't re-run here. On a fixed reader we ran ourselves (gpt-5.4-mini),
+> the **rank-aware recall fix** (see Part 3) lifted end-to-end accuracy from
+> **78.8% → 84.8%** — a clean +6.0 from retrieval alone, with the biggest gains
+> exactly where recall was being silently dropped: multi-session 62.4→72.9%,
+> temporal-reasoning 75.2→82.7%, preference 63.3→76.7%. The reader model is the
+> remaining ceiling, not retrieval (R@5 is 100%). On the same optimized code a
+> stronger local reader (gpt-5.5) scores **89.8%** (449/500) — temporal 93.2%,
+> knowledge-update 94.9%, single-session 97–100%. Saved run:
+> `benchmark_longmemeval_e2e_gpt55.json`.
+>
+> The leaderboard itself has moved since this table was first written — OMEGA
+> 95.4%, ByteRover ~92.8%, and a LongMemEval-**V2** (agentic, May 2026) now exist.
+> Treat absolute ranking claims as time-sensitive; the durable point is that pure
+> FTS competes at the top with zero embedding/vector infrastructure.
 
 ### Per-Category Breakdown
 
@@ -275,6 +300,74 @@ Jieba tokenization handles Chinese memory storage and recall perfectly, includin
 
 ---
 
+## Part 8: CodeMemEval — Coding-Agent Long-Term Memory
+
+> LongMemEval measures *conversational* memory (personal facts, preferences, life
+> events). A coding agent needs a different kind of durable memory. **CodeMemEval**
+> is OpenDB's purpose-built benchmark for it, in the exact LongMemEval schema so it
+> runs through the same harness (`longmemeval_bench.py` / `longmemeval_e2e_bench.py
+> --data codemem_dataset.json`).
+
+### What it measures
+
+27 questions across a fictional but coherent microservices platform ("Helios"),
+each with an ~18-session haystack (evidence sessions + realistic distractor
+sessions, dated chronologically). Every fact, question, and gold answer is
+hand-authored for ground-truth integrity; an LLM only renders each fact into a
+natural developer↔agent transcript.
+
+| Question type | What a coding agent must remember |
+|---|---|
+| code-architecture | durable design/architecture decisions and their rationale |
+| code-convention | coding standards / procedural rules |
+| api-signature | function & endpoint signatures and parameters |
+| bug-fix | past bugs and the fix that resolved them (episodic) |
+| code-location | where a thing lives in the repo |
+| knowledge-update | a decision/convention that **changed** — gold = newest state |
+| multi-session | answer requires combining facts from 2+ sessions |
+| abstention | info not in memory — the agent must decline (anti-hallucination) |
+
+### Retrieval — Recall@K (gate-fix optimized)
+
+| | R@1 | R@3 | R@5 | R@10 | Median recall |
+|---|:-:|:-:|:-:|:-:|:-:|
+| **OpenDB (FTS5)** | 95.8% | **100%** | **100%** | **100%** | **0.8 ms** |
+
+The correct evidence session is in the top-5 for **every** non-abstention question.
+
+### End-to-End Accuracy
+
+Same store→recall→generate→judge pipeline as LongMemEval. Two readers, to separate
+retrieval quality from reader quality:
+
+| Reader model | Overall | arch | conv | api | bug | loc | abstention | knowledge-update | multi-session |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| gpt-5.4-mini (cheap) | **92.6%** (25/27) | 100% | 100% | 100% | 100% | 100% | 100% | 75% | 66.7% |
+| **gpt-5.5** | **96.3%** (26/27) | 100% | 100% | 100% | 100% | 100% | 100% | **100%** | 66.7% |
+
+Even with a **cheap** reader OpenDB clears 92.6%; with a frontier-class reader it
+hits 96.3%, ahead of OMEGA's 95.4% LongMemEval mark (different benchmark, shown for
+scale). Both run on **zero embeddings, zero vector DB, 0.8 ms recall**.
+
+Misses are **reader** limitations, not retrieval — Recall@5 is 100%, so the right
+memory was always in context. The lone gpt-5.5 miss is a 2-session synthesis where
+the reader surfaced one of the two required facts. Crucially, **abstention is 100%**
+on both readers: the agent never fabricated a Redis version, a frontend framework,
+or a secret location that wasn't in memory.
+
+### Why this is OpenDB's home turf
+
+Coding memory is dominated by *exact identifiers* — `CreateInvoice`, `:9090`,
+`pkg/gateway/middleware/auth.go`, `RFC 7807`, PR numbers. This is precisely where
+lexical FTS beats embedding similarity, and where OpenDB couples memory with
+real file/code reading that conversation-only memory layers (Mem0, Zep, Letta)
+don't have.
+
+> Reproduce: `python gen_codemem.py --model gpt-5.5` then
+> `python longmemeval_e2e_bench.py --data codemem_dataset.json --model gpt-5.4-mini --judge-model gpt-5.4-mini`
+
+---
+
 ## Applicability Boundaries
 
 ### When FileDB (FTS) is the right choice
@@ -341,22 +434,32 @@ Unlike competing AI memory and file search systems, OpenDB requires **zero exter
 
 ## How to Run All Benchmarks
 
-```bash
-# Part 1-2: FileDB vs CMD vs RAG (requires FileDB server + OpenRouter API key)
-python benchmark.py --model minimax/minimax-m2.5 --agents cmd filedb rag --judge
+LLM-dependent parts read the OpenAI-compatible endpoint and key from
+`benchmark/.env` (`OPENROUTER_BASE_URL` / `OPENROUTER_API_KEY`), so any
+OpenAI-compatible router works — OpenRouter, a local gateway, etc. Local-only
+parts need no key.
 
-# Part 3: LongMemEval R@K (local only, no API key needed)
+```bash
+# Part 3: LongMemEval R@K (local only, no API key needed) — ~4s
 python longmemeval_bench.py
 
-# Part 4: LongMemEval E2E (requires OpenRouter API key for LLM generation + judging)
-python longmemeval_e2e_bench.py --model openai/gpt-4.1 --judge-model openai/gpt-4.1
+# Part 4: LongMemEval E2E (needs an OpenAI-compatible endpoint in .env)
+python longmemeval_e2e_bench.py --model gpt-5.5 --judge-model gpt-5.5 --concurrency 8
 
-# Part 5: Memory Stress Tests (local only)
+# Part 5: Memory Stress Tests (local only) — 23/23
 python memory_stress_bench.py
-
-# Part 6: Competitor Comparison (requires OpenRouter API key for vector baseline)
-python competitor_bench.py --backends opendb,vector,mem0
 
 # Part 7: Document Search Scalability (local only)
 python scalability_bench.py --scales 500,1000,2000,5000
+
+# Part 8: CodeMemEval — coding-agent memory (regenerate dataset, then eval)
+python gen_codemem.py --model gpt-5.5
+python longmemeval_bench.py     --data codemem_dataset.json                    # retrieval R@K
+python longmemeval_e2e_bench.py --data codemem_dataset.json \
+    --model gpt-5.4-mini --judge-model gpt-5.4-mini                            # E2E
+
+# Part 1-2 / 6: FileDB-vs-CMD-vs-RAG and competitor bench (need a running
+# FileDB server and/or embedding endpoint)
+python benchmark.py --model minimax/minimax-m2.5 --agents cmd filedb rag --judge
+python competitor_bench.py --backends opendb,vector,mem0
 ```

@@ -175,6 +175,50 @@ async def test_cjk_multi_term_recall_survives_query_gate(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_strong_fts_match_survives_query_gate_low_overlap(tmp_path) -> None:
+    """A strong lexical hit must not be dropped just because the question and
+    the stored answer share fewer than two significant tokens.
+
+    Regression for the rank-aware query gate: differently-worded questions
+    (the norm for multi-session / temporal recall) used to lose their #1 FTS
+    match to the token-overlap gate, returning nothing.
+    """
+    from opendb_core.storage.sqlite import SQLiteBackend
+
+    backend = SQLiteBackend(db_path=tmp_path / "memory.db")
+    await backend.init()
+    try:
+        # Target: the only memory that mentions grpc/9090 (the real answer).
+        await backend.store_memory(
+            memory_id="orders-proto",
+            content="The orders-service was migrated to gRPC and now listens on port 9090.",
+            memory_type="semantic", tags=[], metadata={},
+        )
+        # Distractors so the gate would otherwise be in force.
+        await backend.store_memory(
+            memory_id="d1", content="The billing-service uses PostgreSQL for invoices.",
+            memory_type="semantic", tags=[], metadata={},
+        )
+        await backend.store_memory(
+            memory_id="d2", content="Integration tests run with testcontainers.",
+            memory_type="semantic", tags=[], metadata={},
+        )
+
+        # Question shares <2 significant tokens with the target content
+        # ("orders" only), yet the target is the strongest lexical match.
+        result = await backend.recall_memories(
+            query="Which protocol does the orders endpoint expose now?",
+            memory_type=None, tags=None, limit=10, offset=0,
+        )
+    finally:
+        await backend.close()
+
+    ids = [r["memory_id"] for r in result["results"]]
+    assert "orders-proto" in ids, f"strong FTS match was dropped by the gate: {ids}"
+    assert result["results"][0]["memory_id"] == "orders-proto"
+
+
+@pytest.mark.asyncio
 async def test_mcp_memory_recall_forwards_pinned_only(monkeypatch) -> None:
     from mcp_server import client as mcp_client
 

@@ -195,7 +195,7 @@ async def run_vector_backend(memories: list[str], queries: list[dict]) -> Backen
     import numpy as np
 
     client = AsyncOpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url=os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
         api_key=os.environ.get("OPENROUTER_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
         default_headers={
             "HTTP-Referer": "https://github.com/wuwangzhang1216/openDB",

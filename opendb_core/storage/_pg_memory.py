@@ -298,12 +298,21 @@ class PgMemoryMixin:
                 "created_at": r["created_at"].isoformat() + "Z" if r["created_at"] else None,
                 "updated_at": r["updated_at"].isoformat() + "Z" if r["updated_at"] else None,
                 "_age_days": eff_age,
+                "_fts": fts_score,
             })
 
-        scored = [
-            s for s in scored
-            if passes_memory_query_gate(query, str(s["content"]))
-        ]
+        # Rank-aware query gate: never discard a strong lexical hit just
+        # because the question and the stored answer share <2 tokens. Keep
+        # results close to the best FTS score; gate only the weaker tail.
+        # (Mirrors the SQLite backend.)
+        if scored:
+            best_fts = max(s["_fts"] for s in scored)
+            keep_floor = best_fts * 0.15
+            scored = [
+                s for s in scored
+                if s["_fts"] >= keep_floor
+                or passes_memory_query_gate(query, str(s["content"]))
+            ]
         total = len(scored)
 
         # Recency tiebreaker
@@ -318,6 +327,7 @@ class PgMemoryMixin:
         scored.sort(key=lambda x: x["score"], reverse=True)
         for s in scored:
             s.pop("_age_days", None)
+            s.pop("_fts", None)
             s["score"] = float(f"{s['score']:.6g}")
         results = scored[offset : offset + limit]
 
