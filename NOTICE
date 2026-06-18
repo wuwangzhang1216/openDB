@@ -1,0 +1,67 @@
+OpenDB — Third-Party Notices
+============================
+
+OpenDB is licensed under the MIT License (see LICENSE). This file acknowledges
+third-party benchmarks and datasets bundled with or used by the project. Each
+item below remains the property of its respective authors and is used under the
+stated license.
+
+------------------------------------------------------------------------------
+LongMemEval
+------------------------------------------------------------------------------
+LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory
+(ICLR 2025)
+Authors: Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, Dong Yu
+Source:  https://github.com/xiaowu0162/LongMemEval
+Paper:   https://arxiv.org/abs/2410.10813
+License: MIT
+
+OpenDB uses the LongMemEval benchmark to evaluate long-term memory retrieval
+(R@K) and end-to-end accuracy. For reproducibility, the benchmark/ directory
+redistributes derived LongMemEval data files (e.g. longmemeval_oracle.json,
+longmemeval_hypothesis.jsonl). The primary LongMemEval_S evaluation set is NOT
+redistributed here; it is downloaded by the user from the official Hugging Face
+release. The OpenDB benchmark harness scripts that load and grade this data are
+adapted from / interoperate with the LongMemEval format.
+
+  MIT License
+
+  Copyright (c) 2024 Di Wu
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+To cite LongMemEval:
+
+  @article{wu2024longmemeval,
+    title={LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory},
+    author={Di Wu and Hongwei Wang and Wenhao Yu and Yuwei Zhang and Kai-Wei Chang and Dong Yu},
+    year={2024},
+    eprint={2410.10813},
+    archivePrefix={arXiv},
+    primaryClass={cs.CL}
+  }
+
+------------------------------------------------------------------------------
+CodeMemEval (original to OpenDB)
+------------------------------------------------------------------------------
+CodeMemEval is an original benchmark created by the OpenDB project
+(benchmark/gen_codemem.py). Its ground-truth facts, questions, and answers are
+hand-authored; an LLM only renders each fact into a developer/agent transcript.
+It follows the LongMemEval JSON schema so it can reuse the same harness, but it
+contains no LongMemEval data.
