@@ -463,3 +463,33 @@ python longmemeval_e2e_bench.py --data codemem_dataset.json \
 python benchmark.py --model minimax/minimax-m2.5 --agents cmd filedb rag --judge
 python competitor_bench.py --backends opendb,vector,mem0
 ```
+
+## Benchmark Datasets & Attribution
+
+- **LongMemEval** (Parts 3, 4) is a third-party benchmark by Di Wu, Hongwei Wang,
+  Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu (ICLR 2025), released under
+  the **MIT license**. Source: <https://github.com/xiaowu0162/LongMemEval>. The
+  LongMemEval_S evaluation set is downloaded from the official
+  [Hugging Face release](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned);
+  this repository redistributes only derived files (`longmemeval_oracle.json`,
+  `longmemeval_hypothesis.jsonl`) for reproducibility. Full attribution and the
+  MIT license text are in [`NOTICE`](../NOTICE).
+- **CodeMemEval** (Part 8) is an **original OpenDB benchmark** (`gen_codemem.py`),
+  not affiliated with or derived from LongMemEval data.
+- Reported E2E figures are **reader-model dependent** (the generation/judge model
+  is stated per run) and are **not** official leaderboard submissions —
+  LongMemEval has no official submission process. Competitor figures are taken
+  from those systems' own published results and are provided for context only.
+
+To cite LongMemEval:
+
+```bibtex
+@article{wu2024longmemeval,
+  title={LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory},
+  author={Di Wu and Hongwei Wang and Wenhao Yu and Yuwei Zhang and Kai-Wei Chang and Dong Yu},
+  year={2024},
+  eprint={2410.10813},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL}
+}
+```

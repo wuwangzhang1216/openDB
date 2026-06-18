@@ -76,6 +76,8 @@ extensible — add facts to grow coverage.
 
 OpenDB achieves **93.6% E2E accuracy** on [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (ICLR 2025), the standard benchmark for AI agent long-term memory. 500 questions, 6 categories, LLM-as-judge evaluation. Memory **retrieval recall is a reproduced 100% R@5** (470/470, 0 misses) after the rank-aware recall fix described in the report.
 
+> LongMemEval is a third-party benchmark by Di Wu et al. (MIT-licensed). OpenDB's E2E score is reader-model dependent (here: qwen3.6-plus) and is not an official leaderboard submission. Please cite the original paper ([arXiv:2410.10813](https://arxiv.org/abs/2410.10813)) when referencing these numbers — see [Benchmark credits & citation](#benchmark-credits--citation).
+
 | System | LongMemEval E2E | Gen Model | Retrieval Infrastructure |
 |--------|:-:|-----------|--------------------------|
 | OMEGA | 95.4% | GPT-4.1 | Embedding model + vector DB |
@@ -608,6 +610,25 @@ pip install -e ".[dev]"
 pytest
 ```
 
+## Benchmark Credits & Citation
+
+OpenDB evaluates against **[LongMemEval](https://github.com/xiaowu0162/LongMemEval)** (ICLR 2025) by Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu — a third-party benchmark released under the **MIT license**. We download LongMemEval_S from its [official Hugging Face release](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned) and redistribute only the derived oracle/hypothesis files for reproducibility; see [NOTICE](NOTICE) for the full attribution and license text.
+
+Reported E2E numbers are **reader-model dependent** and are **not** official leaderboard submissions — LongMemEval has no official submission process; comparison figures are drawn from the cited systems' own published results. **CodeMemEval** is an original OpenDB benchmark (not affiliated with LongMemEval).
+
+If you use these results, please cite the original work:
+
+```bibtex
+@article{wu2024longmemeval,
+  title={LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory},
+  author={Di Wu and Hongwei Wang and Wenhao Yu and Yuwei Zhang and Kai-Wei Chang and Dong Yu},
+  year={2024},
+  eprint={2410.10813},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL}
+}
+```
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) · Third-party benchmark attributions in [NOTICE](NOTICE).
